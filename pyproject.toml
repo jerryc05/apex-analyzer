@@ -1,0 +1,73 @@
+# ===== INSTALL =====
+# `npm i -g pyright`  # or search for Pylance VSCode extension
+# `pip install -U black pylint isort`
+# ===== HOW TO USE IN TERMINAL (or just use vscode instead) =====
+# ```
+# isort .;black .;
+# pyright
+# find . -name "*.py"|xargs pylint
+# ```
+
+
+# static analysis
+[tool.pyright]
+typeCheckingMode = 'strict'
+useLibraryCodeForTypes = true
+
+reportImportCycles = 'information'
+reportMissingTypeStubs = 'none'
+reportUnknownArgumentType = 'warning'
+reportUnknownMemberType = 'warning'
+reportUnknownParameterType = 'warning'
+reportUnnecessaryCast = 'information'
+reportUntypedClassDecorator = 'information'
+reportUntypedFunctionDecorator = 'information'
+reportUnusedFunction = 'none'
+reportPrivateUsage = 'warning'
+
+
+# linting
+[tool.pylint.format]
+max-line-length = 95 # Also remember to change this in [black]
+
+[tool.pylint.message_control]
+disable = [
+  # 'bad-continuation',           # C0330, suggested by [black], recently removed
+  # 'bad-whitespace',             # C0326, suggested by [black], recently removed
+  'import-outside-toplevel',
+  'invalid-name',               # Requires snake case of at least 3 characters
+  'missing-class-docstring',
+  'missing-function-docstring',
+  'missing-module-docstring',
+  'no-member',
+  'not-an-iterable',            # False positive
+  'too-few-public-methods',
+  'too-many-ancestors',
+  'too-many-arguments',
+  'too-many-boolean-expressions',
+  'too-many-branches',
+  'too-many-instance-attributes',
+  'too-many-locals',
+  'too-many-public-methods',
+  'too-many-return-statements',
+  'too-many-statements',
+  'too-many-lines',
+  'too-many-nested-blocks',
+  'unused-import'
+]
+
+
+
+# code formatter
+[tool.black]
+preview = true
+skip-string-normalization = true
+
+line-length = 95 # Also remember to change this in [pylint]
+
+#fast = true
+
+
+# import sorting
+[tool.isort]
+profile = "black"
