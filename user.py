@@ -1,15 +1,17 @@
 # coding=UTF-8
-from video_ocr_read_opencv import read_apex_video
-from chart_analyze import apex_chart_analyze
 from datetime import datetime
+from pathlib import Path
+
+from chart_analyze import apex_chart_analyze
+from video_ocr_read_opencv import read_apex_video
 
 
 def full_analyze_apex_video(
-    video_path: str,
-    output_evnchart_path: str = None,
-    output_fl_path: str = None,
-    output_original_path: str = None,
-    rank_league: bool = None,
+    video_path: Path,
+    output_evnchart_path: Path,
+    output_fl_path: Path,
+    output_original_path: Path,
+    rank_league: bool | None = None,
 ):
     FRAMES, WEAPONS, AMMOS, DAMAGES, total_frames, fps = read_apex_video(
         video_path=video_path,
@@ -30,11 +32,11 @@ def full_analyze_apex_video(
     )
 
 
-if __name__ == '__main__':
-    video_path = '# Your APEX Video'
-    evnchart_path = './Temp/event_chart.feather'
-    fl_path = './Temp/firing_list.feather'
-    original_data_path = './Temp/readdata_original.feather'
+def main():
+    video_path = Path('# Your APEX Video')
+    evnchart_path = Path('./Temp/event_chart.feather')
+    fl_path = Path('./Temp/firing_list.feather')
+    original_data_path = Path('./Temp/readdata_original.feather')
     tic = datetime.now()
     full_analyze_apex_video(
         video_path,
@@ -44,4 +46,8 @@ if __name__ == '__main__':
     )
 
     toc = datetime.now()
-    print('Elapsed time: %f seconds' % (toc - tic).total_seconds())
+    print(f'Elapsed time: {(toc - tic).total_seconds()} seconds')
+
+
+if __name__ == '__main__':
+    main()

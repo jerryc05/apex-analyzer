@@ -1,26 +1,29 @@
 # coding=UTF-8
+from pathlib import Path
+
+import cv2
 import numpy as np
 import pandas as pd
-import cv2
+
 import weapon_dict
-from damage_ocr import get_damage, damage_correction
+from damage_ocr import damage_correction, get_damage
 
 
 def apex_chart_analyze(
-    video_path: str,  # 视频路径
+    video_path: Path,  # 视频路径
     FRAMES: np.ndarray,  # 视频帧数列
     WEAPONS: np.ndarray,  # 武器数列
     AMMOS: np.ndarray,  # 弹药数列
     DAMAGES: np.ndarray,  # 伤害数列
     TOTAL_FRAMES: int,  # 总帧数
     FPS: int = 60,  # 帧率,默认60
-    eventchart_path: str = None,  # 事件表路径
-    fl_path: str = None,  # 开火清单路径
+    eventchart_path: Path = None,  # 事件表路径
+    fl_path: Path = None,  # 开火清单路径
     rank_league: bool = None,  # 是否排位赛，None为不识别（效率略低）
     FL_FWD_FRAME: int = 9,  # 开火提前记录帧数（而不是弹药减少了才开始记录）
     saveto_bigdata: bool = False,  # 保存至个人大数据
 ):
-    VIDEO_NAME = video_path.split(r'/')[-1]
+    VIDEO_NAME = video_path.name
     fl_bigdata = './BigData/BigData_FiringList.xlsx'
     # 射击状态开关
     shooting = False
@@ -55,7 +58,7 @@ def apex_chart_analyze(
 
     # 视频指针
     capture_p = 0
-    capture_frame = cv2.VideoCapture(video_path)
+    capture_frame = cv2.VideoCapture(str(video_path))
     frame_num = 0
 
     txtdata = open('Temp/TempLog.txt', 'w', encoding='utf-8')
@@ -112,7 +115,7 @@ def apex_chart_analyze(
             shot_pause_delay_frames = 0
         return False
 
-    print(video_path, file=txtdata)
+    print(str(video_path), file=txtdata)
 
     class event_chart:
         def __init__(self, total_frames: int) -> None:
