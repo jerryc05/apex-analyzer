@@ -1,36 +1,40 @@
 # coding=UTF-8
-import numpy as np
-import cv2
 import os
+
+import cv2
+import numpy as np
+import numpy.typing as npt
+import pandas as pd
+
 from func_cv_imread import cv_imread
 from func_cv_imwrite import cv_imwrite, cv_imwrite_png
 from func_img_proc import black_area, img_similarity
-import pandas as pd
 
 # LR1541-1696 HL958-996
 
 
-def cut_weapon(img: np.ndarray) -> np.ndarray:  # 裁剪
+def cut_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 裁剪
     return img[958:996, 1541:1696]
 
 
-def binary_weapon(img: np.ndarray) -> np.ndarray:  # 二值化
+def binary_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 二值化
     return cv2.threshold(img, 225, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
 
 
-def dilate_weapon(img: np.ndarray) -> np.ndarray:  # 膨胀
+def dilate_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 膨胀
     kernel = np.ones((3, 3), np.uint8)
     dilation = cv2.dilate(img, kernel, iterations=1)
     return dilation
 
 
-def erode_weapon(img: np.ndarray) -> np.ndarray:  # 腐蚀
+def erode_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 腐蚀
     kernel = np.ones((3, 3), np.uint8)
     erosion = cv2.erode(img, kernel, iterations=1)
     return erosion
 
 
-def weapon_img_process(img: np.ndarray) -> np.ndarray:
+def weapon_img_process(img: np.ndarray[int, np.dtype[np.uint8]]):
+    assert img.dtype == np.uint8
     if img.ndim > 2:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = binary_weapon(cut_weapon(img))
@@ -78,10 +82,10 @@ def weapon_ref_evaluate():  # 参考互相比较
         './Ref/Weapon_Similarity.xlsx', header=os.listdir(filedir), index=os.listdir(filedir)
     )
     xd = pd.DataFrame(black_area.T)
-    xd.to_excel('./Ref/Weapon_Ref_BlackArea.xlsx', header=os.listdir(filedir), index=None)
+    xd.to_excel('./Ref/Weapon_Ref_BlackArea.xlsx', header=os.listdir(filedir), index=False)
 
 
-def weapon_recognize(img):
+def weapon_recognize(img: np.ndarray[int, np.dtype[np.uint8]]):
     img_cut = weapon_img_process(img)
     # img = Dilate_Weapon(img)
     blackarea = black_area(img_cut)
@@ -90,7 +94,7 @@ def weapon_recognize(img):
     reffiledir = './Ref/Weapons/'
     weaponlist = os.listdir(reffiledir)
     i = 0
-    similarity = np.zeros((len(weaponlist), 1))
+    similarity = np.empty((len(weaponlist), 1))
     for filename in weaponlist:
         IMG_REF = cv_imread(reffiledir + filename)
         sim = img_similarity(img_cut, IMG_REF)
