@@ -70,7 +70,7 @@ def read_apex_video(
         columns=['FRAME', 'WEAPON', 'AMMO', 'DAMAGE'],
     )
     if output_original_data.suffix == '.xls':
-        ori_dtf.to_excel(output_original_data, index=None)
+        ori_dtf.to_excel(output_original_data, index=False)
     if output_original_data.suffix == '.feather':
         ori_dtf.to_feather(output_original_data)
     return FRAMES, WEAPONS, AMMOS, DAMAGES, total_frames, fps
