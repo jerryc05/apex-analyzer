@@ -1,0 +1,4 @@
+*.traineddata filter=lfs diff=lfs merge=lfs binary
+*.xlsx filter=lfs diff=lfs merge=lfs binary
+*.png filter=lfs diff=lfs merge=lfs binary
+*.xml filter=lfs diff=lfs merge=lfs text
