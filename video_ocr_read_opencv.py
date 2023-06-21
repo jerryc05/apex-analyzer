@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from tqdm import tqdm
 
 import weapon_dict
 from ammo_ocr import ammo_recognize_cv
@@ -36,35 +37,38 @@ def read_apex_video(
     AMMOS = np.zeros([total_frames, 1], dtype=np.object_)
     DAMAGES = np.zeros([total_frames, 1], dtype=np.uint16)
 
-    while True:
-        weapon = None
-        ammo = None
-        damage = 0
-        # try:
-        ret, img_bgr = cast(Tuple[bool, npt.NDArray[np.uint8]], capture.read())
-        assert type(ret) == bool
-        if not ret:
-            break
-        assert img_bgr.dtype == np.uint8
-        # except:
-        #     print('read error, jumping......')
-        #     frame_num += 100
-        #     capture.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-        #     continue
-        weapon, wpsim = weapon_recognize(img_bgr)
-        if weapon:
-            ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
-            ammo = ammo_recognize_cv(img_bgr, ammo_maxdigits)
-            if int(frame_num % dmg_sample) == 0:
-                damage = get_damage(img_bgr, rank_league=rank_league)
-        WEAPONS[frame_num, 0] = weapon
-        AMMOS[frame_num, 0] = ammo
-        DAMAGES[frame_num, 0] = damage
-        FRAMES[frame_num, 0] = frame_num
+    with tqdm(total=total_frames) as pbar:
+        pbar.update(frame_num)
+        while True:
+            weapon = None
+            ammo = None
+            damage = 0
+            # try:
+            ret, img_bgr = cast(Tuple[bool, npt.NDArray[np.uint8]], capture.read())
+            assert type(ret) == bool
+            if not ret:
+                break
+            assert img_bgr.dtype == np.uint8
+            # except:
+            #     print('read error, jumping......')
+            #     frame_num += 100
+            #     capture.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+            #     continue
+            weapon, wpsim = weapon_recognize(img_bgr)
+            if weapon:
+                ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
+                ammo = ammo_recognize_cv(img_bgr, ammo_maxdigits)
+                if int(frame_num % dmg_sample) == 0:
+                    damage = get_damage(img_bgr, rank_league=rank_league)
+            WEAPONS[frame_num, 0] = weapon
+            AMMOS[frame_num, 0] = ammo
+            DAMAGES[frame_num, 0] = damage
+            FRAMES[frame_num, 0] = frame_num
 
-        if frame_num % 2000 == 0:
-            print(f'{frame_num} / {total_frames} frames')
-        frame_num += 1
+            # if frame_num % 2000 == 0:
+            #     print(f'{frame_num} / {total_frames} frames')
+            frame_num += 1
+            pbar.update(frame_num - pbar.n)
     ori_dtf = pd.DataFrame(
         np.hstack((FRAMES, WEAPONS, AMMOS, DAMAGES)),
         columns=['FRAME', 'WEAPON', 'AMMO', 'DAMAGE'],
