@@ -2,13 +2,22 @@ import cv2
 import numpy as np
 import os
 from func_cv_imread import cv_imread
-from func_img_proc import img_similarity, black_area
+from func_img_proc import img_similarity, black_area, scale_image
 import pandas as pd
 
 
-def cut_ammo(img: np.ndarray) -> np.ndarray:  # 裁切主弹夹弹药数字
-    img_cut = img[961:1000, 1700:1785]
-    return img_cut
+def cut_ammo(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:  # 裁切主弹夹弹药数字
+    _h = img.shape[0]
+    _w = img.shape[1]
+    assert isinstance(_h, int)
+    assert isinstance(_w, int)
+    if _h == 1080 and _w == 1920:
+        return img[961:1000, 1700:1785]
+    if _h == 1600 and _w == 2560:
+        return scale_image(img[1440:1492, 2266:2380], 0.75)
+    return img[961:1000, 1700:1785]
 
 
 def binary_ammo(img: np.ndarray) -> np.ndarray:  # 弹药数字图二值化

@@ -24,7 +24,7 @@ def apex_chart_analyze(
     saveto_bigdata: bool = False,  # 保存至个人大数据
 ):
     VIDEO_NAME = video_path.name
-    fl_bigdata = './BigData/BigData_FiringList.xlsx'
+    fl_bigdata_path = Path('./BigData/BigData_FiringList.xlsx')
     # 射击状态开关
     shooting = False
     shot_pause_flag = False  # 暂时停火状态
@@ -49,6 +49,10 @@ def apex_chart_analyze(
     damage_fixed = 0  # 原始数据逻辑修正后
     damage_before = 0
     damage_dealt = 0
+    damage_start_inserted = False  # 对于从中间截取的视频片段，第一次获取的非零伤害值予以采信
+    DAMAGE_MAX_CHECK_FRAMES = 2
+    damage_check_frames = 0
+    damage_check_temp = 0
 
     # 开火报表
     firing_list = (
@@ -169,6 +173,25 @@ def apex_chart_analyze(
 
             if DAMAGES[frame_num, 0] != None:  # 整秒
                 damage = DAMAGES[frame_num, 0]
+                if damage_check_frames:
+                    if capture_p == frame_num:
+                        ret, img_bgr = capture_frame.read()
+                    else:
+                        capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+                        ret, img_bgr = capture_frame.read()
+                    capture_p += 1
+                    damage = get_damage(img_bgr)
+                    if damage_check_temp == damage:
+                        damage_check_frames -= 1
+                        if damage_check_frames == 0:
+                            damage_start_inserted = True
+                            damage_fixed = damage
+                    else:
+                        damage_check_temp = damage
+                        damage_check_frames = DAMAGE_MAX_CHECK_FRAMES
+                if not damage_start_inserted and damage and damage_check_frames == 0:
+                    damage_check_frames = DAMAGE_MAX_CHECK_FRAMES
+                    damage_check_temp = damage
                 damage_fixed = damage_correction(damage_fixed, damage)
                 if not shooting:
                     damage_before = damage_fixed
@@ -288,12 +311,12 @@ def apex_chart_analyze(
             'damage_ThisRound',
         ],
     )
-    if '.xls' in eventchart_path:  # 给Excel留个老接口XD
+    if '.xls' in str(eventchart_path):  # 给Excel留个老接口XD
         evn_dtf.to_excel(
             eventchart_path,
             index=False,
         )
-    if '.feather' in eventchart_path:
+    if '.feather' in str(eventchart_path):
         evn_dtf.to_feather(eventchart_path)
     fl_dtf = pd.DataFrame(
         firing_list,
@@ -306,17 +329,17 @@ def apex_chart_analyze(
             'Damage_Dealt',
         ],
     )
-    if '.xls' in fl_path:
+    if '.xls' in str(fl_path):
         fl_dtf.to_excel(fl_path, index=False)
-    if '.feather' in fl_path:
+    if '.feather' in str(fl_path):
         fl_dtf.to_feather(fl_path)
     if saveto_bigdata:
         try:
-            fl_bigdata = pd.read_excel(fl_bigdata)
+            fl_bigdata = pd.read_excel(fl_bigdata_path)
             fl_bigdata = fl_bigdata.append(fl_dtf, ignore_index=True)
             fl_bigdata.to_excel(fl_bigdata, index=None)
         except:
-            fl_dtf.to_excel(fl_bigdata, index=None)
+            fl_dtf.to_excel(fl_bigdata_path, index=None)
 
 
 if __name__ == '__main__':

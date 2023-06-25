@@ -8,17 +8,9 @@ import pandas as pd
 
 from func_cv_imread import cv_imread
 from func_cv_imwrite import cv_imwrite, cv_imwrite_png
-from func_img_proc import black_area, img_similarity
+from func_img_proc import black_area, img_similarity, scale_image
 
 # LR1541-1696 HL958-996
-
-
-def scale_image(
-    img: "np.ndarray[int, np.dtype[np.uint8]]", scale: float
-) -> np.ndarray[int, np.dtype[np.uint8]]:  # 缩放
-    _w = int(img.shape[1] * scale)
-    _h = int(img.shape[0] * scale)
-    return cv2.resize(img, (_w, _h))
 
 
 def cut_weapon(
@@ -31,7 +23,7 @@ def cut_weapon(
     if _h == 1080 and _w == 1920:  # 1080P 16:9
         return img[958:996, 1541:1696]
     if _h == 1600 and _w == 2560:  # 2K 16:10
-        return scale_image(img[1437:1488, 2055:2261], 0.75)
+        return scale_image(img[1437:1488, 2054:2261], 0.75)
     return img[958:996, 1541:1696]
 
 

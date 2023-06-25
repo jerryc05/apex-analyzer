@@ -13,6 +13,9 @@ def full_analyze_apex_video(
     output_original_path: Path,
     rank_league: bool | None = None,
 ):
+    Path('./Temp').mkdir(parents=True, exist_ok=True)
+    Path('./BigData').mkdir(parents=True, exist_ok=True)
+    Path('./Output').mkdir(parents=True, exist_ok=True)
     FRAMES, WEAPONS, AMMOS, DAMAGES, total_frames, fps = read_apex_video(
         video_path=video_path,
         output_original_data=output_original_path,
@@ -33,7 +36,7 @@ def full_analyze_apex_video(
 
 
 def main():
-    video_path = Path('F:/MEDIA/APEX/2023-06-02 21-35-08腰射滋蹦三杀.mp4')
+    video_path = Path('F:/MEDIA/APEX/fight2.mp4')
     # video_path = Path('# Your APEX Video')
     evnchart_path = Path('./Temp/event_chart.feather')
     fl_path = Path('./Temp/firing_list.feather')
