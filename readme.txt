@@ -19,3 +19,6 @@ weapon_recognize: 武器识别文件
 使用方法
 1. 在damage_ocr中修改Tesseract-OCR文件位置
 2. 启动user.py
+
+notes
+做图像识别时一并下载参比PNG图片 git lfs pull --include="*.png"

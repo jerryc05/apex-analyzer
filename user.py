@@ -33,7 +33,8 @@ def full_analyze_apex_video(
 
 
 def main():
-    video_path = Path('# Your APEX Video')
+    video_path = Path('F:/MEDIA/APEX/2023-06-02 21-35-08腰射滋蹦三杀.mp4')
+    # video_path = Path('# Your APEX Video')
     evnchart_path = Path('./Temp/event_chart.feather')
     fl_path = Path('./Temp/firing_list.feather')
     original_data_path = Path('./Temp/readdata_original.feather')
