@@ -13,21 +13,45 @@ from func_img_proc import black_area, img_similarity
 # LR1541-1696 HL958-996
 
 
-def cut_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 裁剪
+def scale_image(
+    img: "np.ndarray[int, np.dtype[np.uint8]]", scale: float
+) -> np.ndarray[int, np.dtype[np.uint8]]:  # 缩放
+    _w = int(img.shape[1] * scale)
+    _h = int(img.shape[0] * scale)
+    return cv2.resize(img, (_w, _h))
+
+
+def cut_weapon(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:  # 裁剪
+    _h = img.shape[0]
+    _w = img.shape[1]
+    assert isinstance(_h, int)
+    assert isinstance(_w, int)
+    if _h == 1080 and _w == 1920:  # 1080P 16:9
+        return img[958:996, 1541:1696]
+    if _h == 1600 and _w == 2560:  # 2K 16:10
+        return scale_image(img[1437:1488, 2055:2261], 0.75)
     return img[958:996, 1541:1696]
 
 
-def binary_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 二值化
+def binary_weapon(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:  # 二值化
     return cv2.threshold(img, 225, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
 
 
-def dilate_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 膨胀
+def dilate_weapon(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:  # 膨胀
     kernel = np.ones((3, 3), np.uint8)
     dilation = cv2.dilate(img, kernel, iterations=1)
     return dilation
 
 
-def erode_weapon(img: np.ndarray[int,np.dtype[np.uint8]]) -> np.ndarray[int,np.dtype[np.uint8]]:  # 腐蚀
+def erode_weapon(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:  # 腐蚀
     kernel = np.ones((3, 3), np.uint8)
     erosion = cv2.erode(img, kernel, iterations=1)
     return erosion
@@ -42,8 +66,8 @@ def weapon_img_process(img: np.ndarray[int, np.dtype[np.uint8]]):
     return img
 
 
-def weapon_ref_generate():  # 生成参考
-    sourcefiledir = './Ref/Weapons_Original/'
+def weapon_ref_generate():  # 根据截图生成标准参考图
+    sourcefiledir = './Ref/Weapons_Original/'  # 截图文件夹，文件需以武器名称命名
     destfiledir = './Ref/Weapons/'
     for source in os.listdir(sourcefiledir):
         img_bgr = cv_imread(sourcefiledir + source)
@@ -79,10 +103,10 @@ def weapon_ref_evaluate():  # 参考互相比较
     print(np.mean(similarity))
     xd = pd.DataFrame(similarity)
     xd.to_excel(
-        './Ref/Weapon_Similarity.xlsx', header=os.listdir(filedir), index=os.listdir(filedir)
+        './Ref/weapon_similarity.xlsx', header=os.listdir(filedir), index=os.listdir(filedir)
     )
     xd = pd.DataFrame(black_area.T)
-    xd.to_excel('./Ref/Weapon_Ref_BlackArea.xlsx', header=os.listdir(filedir), index=False)
+    xd.to_excel('./Ref/weapon_ref_blackarea.xlsx', header=os.listdir(filedir), index=False)
 
 
 def weapon_recognize(img: np.ndarray[int, np.dtype[np.uint8]]):
