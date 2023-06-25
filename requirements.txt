@@ -2,3 +2,4 @@ opencv-python>=4.7.0
 pyarrow
 pandas
 tqdm
+lxml
