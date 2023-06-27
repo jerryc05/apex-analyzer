@@ -67,21 +67,28 @@ def apex_chart_analyze(
 
     txtdata = open('Temp/TempLog.txt', 'w', encoding='utf-8')
 
-    def round_report():  # 一梭子汇报
-        nonlocal shooting, shot_pause_flag, ammo_before, weapon_change_done, damage, damage_fixed, damage_dealt, damage_before, firing_list, capture_p
-        if not weapon_before:
-            return None  # 之前没武器
-        shot_ammo = ammo_before - ammo_after
-        used_weapon = weapon
-        if weapon_change_done:
-            used_weapon = weapon_before
-        # Damage Process
+    def get_current_img() -> (
+        np.ndarray[int, np.dtype[np.uint8]]
+    ):  # 获取frame_num所在帧图像，为get_damage()做准备
+        nonlocal capture_p  # opencv读图指针，如果非连续读图用capture.set重定位
         if capture_p == frame_num:
             ret, img_bgr = capture_frame.read()
         else:
             capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
             ret, img_bgr = capture_frame.read()
         capture_p += 1
+        return img_bgr
+
+    def round_report():  # 一梭子汇报
+        nonlocal shooting, shot_pause_flag, ammo_before, weapon_change_done, damage, damage_fixed, damage_dealt, damage_before, firing_list, capture_p
+        # if not weapon_before:
+        #     return None  # 之前没武器
+        shot_ammo = ammo_before - ammo_after
+        used_weapon = weapon
+        if weapon_change_done:
+            used_weapon = weapon_before
+        # Damage Process
+        img_bgr = get_current_img()
         damage = get_damage(img_bgr, rank_league)
         damage_fixed = damage_correction(damage_fixed, damage)
         damage_dealt = damage_fixed - damage_before
@@ -333,6 +340,10 @@ def apex_chart_analyze(
         fl_dtf.to_excel(fl_path, index=False)
     if '.feather' in str(fl_path):
         fl_dtf.to_feather(fl_path)
+    newread_dtf = pd.DataFrame(
+        evn_m[:, (0, 7, 1, 14)], columns=['frame', 'weapon', 'ammo', 'damage']
+    )
+    newread_dtf.to_feather('./Temp/readdata_original.feather')
     if saveto_bigdata:
         try:
             fl_bigdata = pd.read_excel(fl_bigdata_path)
@@ -346,11 +357,11 @@ if __name__ == '__main__':
     # 如果对视频读取的结果有修改，在这里单独运行分析部分
     vid_path = '# Your APEX Video'  # Your APEX Video
     # ORIGINAL_DATA = pd.read_excel('./Temp/ReadData_Original.xlsx').values
-    ORIGINAL_DATA = pd.read_feather('./Temp/readdata_original.feather').values
-    FRAMES = ORIGINAL_DATA[:, 0:1]
-    WEAPONS = ORIGINAL_DATA[:, 1:2]
-    AMMOS = ORIGINAL_DATA[:, 2:3]
-    DAMAGES = ORIGINAL_DATA[:, 3:4]
+    original_data = pd.read_feather('./Temp/readdata_original.feather').values
+    FRAMES = original_data[:, 0:1]
+    WEAPONS = original_data[:, 1:2]
+    AMMOS = original_data[:, 2:3]
+    DAMAGES = original_data[:, 3:4]
     total_frames = len(FRAMES)
     fps = 60
     EVN_CHART_PATH = './Temp/event_chart.feather'

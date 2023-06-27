@@ -36,7 +36,7 @@ def full_analyze_apex_video(
 
 
 def main():
-    video_path = Path('F:/MEDIA/APEX/fight2.mp4')
+    video_path = Path('F:/MEDIA/APEX/online/Apex Legends_06-16-2023_20-17-34-164.mp4')
     # video_path = Path('# Your APEX Video')
     evnchart_path = Path('./Temp/event_chart.feather')
     fl_path = Path('./Temp/firing_list.feather')
