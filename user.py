@@ -5,6 +5,8 @@ from pathlib import Path
 from chart_analyze import apex_chart_analyze
 from video_ocr_read_opencv import read_apex_video
 
+import sys
+
 
 def full_analyze_apex_video(
     video_path: Path,
@@ -36,10 +38,9 @@ def full_analyze_apex_video(
 
 
 def main():
-    video_path = Path('F:/MEDIA/APEX/online/Apex Legends_06-16-2023_20-17-34-164.mp4')
-    # video_path = Path('# Your APEX Video')
+    assert len(sys.argv) > 1, 'Provide a path to the video file!'
+    video_path = Path(sys.argv[1])
     assert video_path.is_file(), f"video_path [{video_path}] not found or is not a file!"
-
 
     evnchart_path = Path('./Temp/event_chart.feather')
     fl_path = Path('./Temp/firing_list.feather')
