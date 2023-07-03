@@ -153,7 +153,7 @@ def apex_chart_analyze(
     for frame_num in range(TOTAL_FRAMES):
         weapon = WEAPONS[frame_num, 0]
         if weapon:
-            if weapon != weapon_hold:  # 不一样
+            if weapon != weapon_hold:  # 装备变更控制环节
                 if weapon_change:  # 在变更
                     if weapon == weapon_temp:
                         if (
@@ -206,8 +206,8 @@ def apex_chart_analyze(
             if ammo != None:
                 # Sign up: Obtain, Reload, Change
                 if weapon_change_done:  # 换了
-                    print('检测到换武器')
-                    print('检测到换武器', file=txtdata)
+                    print('weapon changed')
+                    print('weapon changed', file=txtdata)
                     # Calculate Last Weapon Damage
                     if shooting:
                         round_report()
@@ -225,7 +225,9 @@ def apex_chart_analyze(
                             ammo_after = ammo
                             if not weapon_change:
                                 if not shooting:
-                                    firing_start_f = frame_num - FL_FWD_FRAME
+                                    firing_start_f = (
+                                        frame_num - FL_FWD_FRAME
+                                    )  # 记录开火开始时间
                                 shooting = True
                                 shot_pause_flag = False
                         else:  # 可能情况：换枪、换子弹
@@ -234,12 +236,12 @@ def apex_chart_analyze(
                             if weapon_change:
                                 ammo_before = ammo_after
                             elif ammo == 0:  # 换子弹会先清零
-                                print('清空弹仓')
-                                print('清空弹仓', file=txtdata)
+                                print('megazine clear')
+                                print('megazine clear', file=txtdata)
                                 ammo_after = ammo
-                    elif ammo > ammo_after:
-                        print('检测到换弹')
-                        print('检测到换弹', file=txtdata)
+                    elif ammo > ammo_after:  # 再装填
+                        print('reloading')
+                        print('reloading', file=txtdata)
                         if shooting:
                             round_report()
                         ammo_after = ammo
@@ -248,8 +250,8 @@ def apex_chart_analyze(
                         # 停火计时
                         if shooting:
                             if shot_pause():
-                                print('检测到停火')
-                                print('检测到停火', file=txtdata)
+                                print('end shot')
+                                print('end shot', file=txtdata)
                                 round_report()
 
         # Record EventChart
