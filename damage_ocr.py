@@ -48,7 +48,8 @@ def cut_dmg_logo_match_tpl(
     img: np.ndarray[int, np.dtype[np.uint8]]
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
     img_cut = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
+    if len(img_cut.shape) > 2:
+        img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
     res = cv2.matchTemplate(img_cut, DMG_REF, cv2.TM_CCOEFF_NORMED)
     loc = np.where(res == np.max(res))[1][0]  # xtick
     return img_cut[:, loc + w_ref :]
@@ -89,5 +90,21 @@ def main() -> None:
     cv2.imwrite('./Temp/newoutput.png', dmgnum_1)
 
 
+from pathlib import Path
+
+
+def convert_train_img() -> None:
+    sourcedir = Path('./Temp/train')
+    destdir = Path('./Temp/train_dmg')
+    cnt = 1
+    for img_path in sourcedir.rglob('*.jpg'):
+        img_gray = cv2.imread(str(img_path), 0)
+        img_cut = cut_dmg_logo_match_tpl(dmg_area_select(img_gray, False))
+        _output = str(destdir) + '/' + str(cnt) + '.png'
+        cv2.imwrite(_output, img_cut)
+        cnt += 1
+    print('{} images convert successfully!'.format(cnt))
+
+
 if __name__ == '__main__':
-    main()
+    convert_train_img()
