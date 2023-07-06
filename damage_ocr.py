@@ -89,5 +89,48 @@ def main() -> None:
     cv2.imwrite('./Temp/newoutput.png', dmgnum_1)
 
 
+# developing new algorithm
+from pathlib import Path
+
+
+def convert_train_img() -> None:
+    sourcedir = Path('./Temp/train')
+    destdir = Path('./Temp/train_dmg')
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
+    for img_path in sourcedir.rglob('*.jpg'):
+        img_gray = cv2.imread(str(img_path), 0)
+        img_cut = cut_dmg_logo_match_tpl(dmg_area_select(img_gray, False))
+        if img_cut.size:
+            _output = str(destdir) + '/' + str(cnt) + '.png'
+            cnt += 1
+            cv2.imwrite(_output, img_cut)
+    print('{} images converted successfully!'.format(cnt))
+
+
+def post_process_img(
+    img_cut: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:
+    if len(img_cut.shape) > 2:
+        img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
+    kernel = np.ones((2, 2), np.uint8)
+    dilation = cv2.dilate(img_cut, kernel, iterations=1)
+    erosion = cv2.erode(dilation, kernel, iterations=1)
+    return erosion
+
+
+def post_convert_train_img() -> None:
+    sourcedir = Path('./Temp/train_dmg')
+    destdir = Path('./Temp/post_train_dmg')
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
+    for img_path in sourcedir.rglob('*.png'):
+        img_gray = cv2.imread(str(img_path), 0)
+        img_processed = post_process_img(img_gray)
+        cnt += 1
+        cv2.imwrite(str(destdir) + '/' + str(cnt) + '.png', img_processed)
+    print('{} images post-converted successfully!'.format(cnt))
+
+
 if __name__ == '__main__':
-    main()
+    post_convert_train_img()

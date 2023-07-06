@@ -1,7 +1,13 @@
-皮のEA风格代码作——Analyzer for Apex Legends beta0.1
+皮のEA风格代码作——Analyzer for Apex Legends beta0.2
 可以通过Apex录像了解您的表现
-目前已经实现了记录开火时刻与xml剪辑表输出（后期加入）
-开发用源素材分辨率1920*1080,60p
+目前已经实现了记录开火时刻与xml剪辑表输出
+开发用源素材分辨率1920*1080,60p，目前支持1920*1080与2560*1600分辨率
+
+Upd beta0.2:
+可以使用xml_maker输出剪辑表
+优化了部分文件存储
+新增2K 16:10分辨率支持
+debuging:尝试摆脱tesseract的依赖
 
 请先下载安装Tesseract-OCR与pytesseract，训练好的文件Tesseract traihneddata\num.traineddata，拷贝到 %YourPath%\Tesseract-OCR\tessdata
 
