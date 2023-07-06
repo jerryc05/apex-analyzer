@@ -127,8 +127,9 @@ def post_convert_train_img() -> None:
     for img_path in sourcedir.rglob('*.png'):
         img_gray = cv2.imread(str(img_path), 0)
         img_processed = post_process_img(img_gray)
+        img_cut = img_processed[9:-4,:]
         cnt += 1
-        cv2.imwrite(str(destdir) + '/' + str(cnt) + '.png', img_processed)
+        cv2.imwrite(str(destdir) + '/' + str(cnt) + '.png', img_cut)
     print('{} images post-converted successfully!'.format(cnt))
 
 
