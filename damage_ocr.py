@@ -34,7 +34,8 @@ def cut_dmg_logo_classic(
     img: np.ndarray[int, np.dtype[np.uint8]]
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
     img_cut = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
+    if len(img_cut.shape) > 2:
+        img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
     _h, _w = np.shape(img_cut)
     sim = np.zeros([_w - w_ref, 1])
     for i in range(_w - w_ref):
@@ -48,10 +49,45 @@ def cut_dmg_logo_match_tpl(
     img: np.ndarray[int, np.dtype[np.uint8]]
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
     img_cut = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
+    if len(img_cut.shape) > 2:
+        img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
     res = cv2.matchTemplate(img_cut, DMG_REF, cv2.TM_CCOEFF_NORMED)
     loc = np.where(res == np.max(res))[1][0]  # xtick
+    # print('Max Simulation: {}'.format(np.max(res)))
     return img_cut[:, loc + w_ref :]
+
+
+def split_dmg_digits(img: np.ndarray[int, np.dtype[np.uint8]]) -> list():  # 分割数字到每一位
+    # img_cut = img[9:-4, :]  # 裁切上下白边
+    img_cut = img
+    empty_detector = np.min(img_cut, axis=0)
+    _ret = list()
+    _renew = True
+    if np.min(empty_detector) == 255:
+        return _ret  # 没有数字
+    blackarea_index = np.where(empty_detector == 0)[0]
+    _first_index = blackarea_index[0]
+    _last_index = blackarea_index[0]
+    for _index in blackarea_index:
+        if _renew:  # 刷新
+            _first_index = _index
+            _last_index = _index
+            _renew = False
+        if not _renew and _index - _last_index < 2:  # 连续
+            _last_index = _index
+        if not _renew and _index - _last_index >= 2:  # 出现断点
+            _ret.append(img_cut[:, _first_index : _last_index + 1])
+            _renew = True
+    if not _renew:
+        _ret.append(img_cut[:, _first_index : _last_index + 1])
+    return _ret
+
+
+def dmg_digit_recognize(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> int | None:  # 单位数字识别
+    if img.shape[1] > 10 or img.shape[1] < 2:  # 噪点或多位数字
+        return None
 
 
 def get_damage(
@@ -75,20 +111,6 @@ def damage_correction(damage_fixed: int, damage_read: int) -> int:  # 修正策�
     return max(damage_fixed, damage_read)
 
 
-def main() -> None:
-    img_bgr = cv2.imread('# Your APEX Video Screenshot')
-    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    img_cut = img_bgr[94:120, 1675:1761]
-    img_dmgnum = cut_dmg_logo_classic(img_cut)
-    cv2.imwrite('./Temp/classicoutput.png', img_dmgnum)
-    img_cut = cv2.threshold(img_cut, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    img_cut_1 = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
-    res = cv2.matchTemplate(img_cut_1, DMG_REF, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res == np.max(res))[1][0]  # xtick
-    dmgnum_1 = img_cut_1[:, loc + w_ref :]
-    cv2.imwrite('./Temp/newoutput.png', dmgnum_1)
-
-
 # developing new algorithm
 from pathlib import Path
 
@@ -100,6 +122,7 @@ def convert_train_img() -> None:
     cnt = 0
     for img_path in sourcedir.rglob('*.jpg'):
         img_gray = cv2.imread(str(img_path), 0)
+        print('Processing Img {}'.format(cnt + 1))
         img_cut = cut_dmg_logo_match_tpl(dmg_area_select(img_gray, False))
         if img_cut.size:
             _output = str(destdir) + '/' + str(cnt) + '.png'
@@ -127,11 +150,31 @@ def post_convert_train_img() -> None:
     for img_path in sourcedir.rglob('*.png'):
         img_gray = cv2.imread(str(img_path), 0)
         img_processed = post_process_img(img_gray)
-        img_cut = img_processed[9:-4,:]
+        img_cut = img_processed[9:-4, :]
         cnt += 1
         cv2.imwrite(str(destdir) + '/' + str(cnt) + '.png', img_cut)
     print('{} images post-converted successfully!'.format(cnt))
 
 
+def split_train_img() -> None:
+    sourcedir = Path('./Temp/post_train_dmg')
+    destdir = Path('./Temp/split_train_dmg')
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
+    for img_path in sourcedir.rglob('*.png'):
+        img_gray = cv2.imread(str(img_path), 0)
+        img_series = split_dmg_digits(img_gray)
+        _i = 0
+        cnt += 1
+        for img in img_series:
+            _i += 1
+            cv2.imwrite(str(destdir) + '/' + str(cnt) + '_' + str(_i) + '.png', img)
+
+
+def main() -> None:
+    img_gray = cv2.imread('./Temp/split_train_dmg/1_1.png', 0)
+    split_dmg_digits(img_gray)
+
+
 if __name__ == '__main__':
-    post_convert_train_img()
+    convert_train_img()
