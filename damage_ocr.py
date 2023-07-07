@@ -7,6 +7,9 @@ from func_img_proc import scale_image
 # DMGCUT:L1750,R1830,L95,H120
 # Img_Damage = IMG[94:120,1749:1835]
 DMG_REF = cv2.imread('./Ref/DmgLogo/DmgLogo.png', 0)
+DMG_NUM = list()
+for _p in range(10):
+    DMG_NUM.append(cv2.imread('./Ref/Damage/' + str(_p) + '.png', 0))
 h_ref, w_ref = np.shape(DMG_REF)
 pytesseract.pytesseract.tesseract_cmd = 'D:/Program Files/Tesseract-OCR/tesseract.exe'
 
@@ -86,8 +89,17 @@ def split_dmg_digits(img: np.ndarray[int, np.dtype[np.uint8]]) -> list():  # 分
 def dmg_digit_recognize(
     img: np.ndarray[int, np.dtype[np.uint8]]
 ) -> int | None:  # 单位数字识别
-    if img.shape[1] > 10 or img.shape[1] < 2:  # 噪点或多位数字
+    assert len(img.shape) == 2, 'Input image channel error!'
+    _h, _w = img.shape
+    if _w > 10 or _w < 2:  # 噪点或多位数字
         return None
+    # 判1!
+    img_hstacked = np.hstack(
+        (255 * np.ones([_h, 2], dtype=np.uint8), img, 255 * np.ones([_h, 2], dtype=np.uint8))
+    )
+    for _p in range(10):
+        max_sim = np.max(cv2.matchTemplate(img_hstacked, DMG_NUM[_p], cv2.TM_CCOEFF_NORMED))
+        print('{} similarity: {}'.format(_p, max_sim))
 
 
 def get_damage(
@@ -172,9 +184,9 @@ def split_train_img() -> None:
 
 
 def main() -> None:
-    img_gray = cv2.imread('./Temp/split_train_dmg/1_1.png', 0)
-    split_dmg_digits(img_gray)
+    img_gray = cv2.imread('./Temp/split_train_dmg/20_2.png', 0)  # 4
+    dmg_digit_recognize(img_gray)
 
 
 if __name__ == '__main__':
-    convert_train_img()
+    main()
