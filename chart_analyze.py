@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 import weapon_dict
-from damage_ocr import damage_correction, get_damage
+from damage_ocr import damage_correction, get_damage_match_tpl
 
 
 def apex_chart_analyze(
@@ -69,7 +69,7 @@ def apex_chart_analyze(
 
     def get_current_img() -> (
         np.ndarray[int, np.dtype[np.uint8]]
-    ):  # 获取frame_num所在帧图像，为get_damage()做准备
+    ):  # 获取frame_num所在帧图像，为get_damage_match_tpl()做准备
         nonlocal capture_p  # opencv读图指针，如果非连续读图用capture.set重定位
         if capture_p == frame_num:
             ret, img_bgr = capture_frame.read()
@@ -89,7 +89,7 @@ def apex_chart_analyze(
             used_weapon = weapon_before
         # Damage Process
         img_bgr = get_current_img()
-        damage = get_damage(img_bgr, rank_league)
+        damage = get_damage_match_tpl(img_bgr, rank_league)
         damage_fixed = damage_correction(damage_fixed, damage)
         damage_dealt = damage_fixed - damage_before
         damage_before = damage_fixed
@@ -187,7 +187,7 @@ def apex_chart_analyze(
                         capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
                         ret, img_bgr = capture_frame.read()
                     capture_p += 1
-                    damage = get_damage(img_bgr)
+                    damage = get_damage_match_tpl(img_bgr)
                     if damage_check_temp == damage:
                         damage_check_frames -= 1
                         if damage_check_frames == 0:

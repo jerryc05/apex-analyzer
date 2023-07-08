@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 import weapon_dict
 from ammo_ocr import ammo_recognize_cv
-from damage_ocr import get_damage
+from damage_ocr import get_damage_match_tpl
 from weapon_recognize import weapon_recognize
 
 
@@ -59,7 +59,7 @@ def read_apex_video(
                 ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
                 ammo = ammo_recognize_cv(img_bgr, ammo_maxdigits)
                 if int(frame_num % dmg_sample) == 0:
-                    damage = get_damage(img_bgr, rank_league=rank_league)
+                    damage = get_damage_match_tpl(img_bgr, rank_league=rank_league)
             WEAPONS[frame_num, 0] = weapon
             AMMOS[frame_num, 0] = ammo
             DAMAGES[frame_num, 0] = damage

@@ -1,7 +1,11 @@
-皮のEA风格代码作——Analyzer for Apex Legends beta0.2
+皮のEA风格代码作——Analyzer for Apex Legends beta0.21
 可以通过Apex录像了解您的表现
 目前已经实现了记录开火时刻与xml剪辑表输出
 开发用源素材分辨率1920*1080,60p，目前支持1920*1080与2560*1600分辨率
+
+
+Upd 0.21:
+不需要tesseract了
 
 Upd beta0.2:
 可以使用xml_maker输出剪辑表
