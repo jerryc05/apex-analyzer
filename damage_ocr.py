@@ -71,10 +71,16 @@ def split_dmg_digits(img: np.ndarray[int, np.dtype[np.uint8]]) -> list():  # 分
             _renew = False
         if not _renew and _index - _last_index < 2:  # 连续
             _last_index = _index
-        if not _renew and _index - _last_index >= 2:  # 出现断点
+        if not _renew and _index - _last_index >= 2:  # 出现下一位数
+            if _last_index - _first_index > 9:
+                return list()
             _ret.append(img_cut[:, _first_index : _last_index + 1])
             _renew = True
+            if _index - _last_index >= 10:#后面没数字了
+                return _ret
     if not _renew:
+        if _last_index - _first_index > 9:
+            return list()
         _ret.append(img_cut[:, _first_index : _last_index + 1])
     return _ret
 
@@ -95,34 +101,38 @@ def dmg_digit_recognize(
     max_sim_not1_num = 0
     for _p in range(10):
         num_sim = np.max(cv2.matchTemplate(img_hstacked, DMG_NUM[_p], cv2.TM_CCOEFF_NORMED))
-        print('{} similarity: {}'.format(_p, num_sim))
+        #print('{} similarity: {}'.format(_p, num_sim))
         if num_sim > max_sim:
             max_sim = num_sim
             max_sim_num = _p
         if not _p == 1 and num_sim > max_sim_not1:
             max_sim_not1 = num_sim
             max_sim_not1_num = _p
-    if max_sim_num == 1:
-        if _w <= 6:  # 判1
-            return 1
-        else:
-            # 判6
-            if max_sim_not1_num == 8:
-                __block_cnt = 0
-                __last_pos = -1
-                for __p in range(_w):
-                    if img[4, __p] == 0:
-                        if __p - __last_pos > 1:
-                            __block_cnt += 1
-                        __last_pos = __p
-                if __last_pos >= 0:
+    if max_sim_num == 1 and _w <= 6:  # 判1
+        return 1
+    if max_sim_not1_num == 8:
+        #判6
+        __block_cnt = 0
+        __last_pos = -2
+        for __p in range(_w):
+            if img[4, __p] == 0:
+                if __p - __last_pos > 1:
                     __block_cnt += 1
-                if __block_cnt > 1:
-                    return 8
-                else:
-                    return 6
-            return max_sim_not1_num
-    return max_sim_num
+                __last_pos = __p
+        if __block_cnt == 1:
+            return 6
+        #判9
+        __block_cnt = 0
+        __last_pos = -2
+        for __p in range(_w):
+            if img[8, __p] == 0:
+                if __p - __last_pos > 1:
+                    __block_cnt += 1
+                __last_pos = __p
+        if __block_cnt == 1:
+            return 9
+        return 8
+    return max_sim_not1_num
 
 
 
@@ -135,6 +145,8 @@ def get_damage_match_tpl(
         return 0
     img_dmgnum = post_process_img(img_dmgnum)
     digits_list = split_dmg_digits(img_dmgnum)
+    if not len(digits_list):
+        return None
     damage = 0
     for digit_img in digits_list:
         digit_num = dmg_digit_recognize(digit_img)
@@ -230,32 +242,31 @@ def main() -> None:
         destdir.rmdir()
     destdir.mkdir(parents=True, exist_ok=True)
     errs = 0
+    discards = 0
     cnt = 0
     for img_path in sourcedir.rglob('*.png'):
         img_gray = cv2.imread(str(img_path), 0)
+        img_cut = post_process_img(cut_dmg_logo_match_tpl(dmg_area_select(img_gray)))
         cnt += 1
         dmg_real = int(img_path.stem.split('_')[0])
-        img_dmgnum = post_process_img(img_gray)
-        digits_list = split_dmg_digits(img_dmgnum)
-        damage = 0
-        for digit_img in digits_list:
-            digit_num = dmg_digit_recognize(digit_img)
-            if digit_num is not None:
-                damage = 10 * damage + digit_num
-        if not damage == dmg_real:
-            errs += 1
-            cv2.imwrite(
-                str(destdir)
-                + '/'
-                + str(damage)
-                + '_'
-                + str(dmg_real)
-                + '('
-                + str(cnt)
-                + ').png',
-                img_gray,
-            )
-    print('{} images read, {} errs found!'.format(cnt, errs))
+        dmg_read = get_damage_match_tpl(img_gray, None)
+        if not dmg_read == dmg_real:
+            if dmg_read is None:
+                discards += 1
+            else:
+                errs += 1
+                cv2.imwrite(
+                    str(destdir)
+                    + '/'
+                    + str(dmg_read)
+                    + '_'
+                    + str(dmg_real)
+                    + '('
+                    + str(cnt)
+                    + ').png',
+                    img_cut,
+                )
+    print('{} images read, {} errs, {} discards!'.format(cnt, errs, discards))
 
 
 if __name__ == '__main__':
