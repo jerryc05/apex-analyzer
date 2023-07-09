@@ -81,7 +81,7 @@ def main(style=None):
     OUTPUT_DIR = Path('./Output/')
     if not OUTPUT_DIR.exists():
         Path.mkdir()
-    srtdata = open(str(OUTPUT_DIR) + 'subtitle.srt', 'w', encoding='utf-8')
+    srtdata = open(str(OUTPUT_DIR) + '/subtitle.srt', 'w', encoding='utf-8')
     for vidclip_no in range(MAXVIDS):
         print('%d' % (vidclip_no + 1), file=srtdata)
         print(

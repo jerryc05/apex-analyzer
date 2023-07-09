@@ -92,6 +92,7 @@ def apex_chart_analyze(
         damage = get_damage_match_tpl(img_bgr, rank_league)
         damage_fixed = damage_correction(damage_fixed, damage)
         damage_dealt = damage_fixed - damage_before
+        assert damage_dealt >= 0, 'Wrong damage_dealt number!'
         damage_before = damage_fixed
 
         print(
@@ -357,7 +358,7 @@ def apex_chart_analyze(
 
 if __name__ == '__main__':
     # 如果对视频读取的结果有修改，在这里单独运行分析部分
-    vid_path = '# Your APEX Video'  # Your APEX Video
+    vid_path = Path('# Your APEX Video')  # Your APEX Video
     # ORIGINAL_DATA = pd.read_excel('./Temp/ReadData_Original.xlsx').values
     original_data = pd.read_feather('./Temp/readdata_original.feather').values
     FRAMES = original_data[:, 0:1]

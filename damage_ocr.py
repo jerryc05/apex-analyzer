@@ -6,9 +6,7 @@ from func_img_proc import scale_image
 # DMGCUT:L1750,R1830,L95,H120
 # Img_Damage = IMG[94:120,1749:1835]
 DMG_REF = cv2.imread('./Ref/DmgLogo/DmgLogo.png', 0)
-DMG_NUM = list()
-for _p in range(10):
-    DMG_NUM.append(cv2.imread('./Ref/Damage/' + str(_p) + '.png', 0))
+DMG_NUM = [cv2.imread('./Ref/Damage/' + str(_p) + '.png', 0) for _p in range(10)]
 h_ref, w_ref = np.shape(DMG_REF)
 
 
@@ -34,13 +32,13 @@ def dmg_area_select(
 def cut_dmg_logo_match_tpl(
     img: np.ndarray[int, np.dtype[np.uint8]]
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
-    img_cut = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    if len(img_cut.shape) > 2:
-        img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
-    res = cv2.matchTemplate(img_cut, DMG_REF, cv2.TM_CCOEFF_NORMED)
+    if len(img.shape) > 2:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
+    res = cv2.matchTemplate(img, DMG_REF, cv2.TM_CCOEFF_NORMED)
     loc = np.where(res == np.max(res))[1][0]  # xtick
     # print('Max Simulation: {}'.format(np.max(res)))
-    return img_cut[:, loc + w_ref :]
+    return img[:, loc + w_ref :]
 
 
 def post_process_img(  # 滤波与去除上下白边
@@ -138,7 +136,7 @@ def dmg_digit_recognize(
 
 def get_damage_match_tpl(
     img: np.ndarray[int, np.dtype[np.uint8]], rank_league: bool | None = None
-) -> int | None:
+) -> int:
     img_cut = dmg_area_select(img, rank_league=rank_league)
     img_dmgnum = cut_dmg_logo_match_tpl(img_cut)
     if img_dmgnum.shape[1] == 0:
@@ -146,7 +144,7 @@ def get_damage_match_tpl(
     img_dmgnum = post_process_img(img_dmgnum)
     digits_list = split_dmg_digits(img_dmgnum)
     if not len(digits_list):
-        return None
+        return 0
     damage = 0
     for digit_img in digits_list:
         digit_num = dmg_digit_recognize(digit_img)

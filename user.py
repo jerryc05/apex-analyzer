@@ -38,6 +38,7 @@ def full_analyze_apex_video(
 
 
 def main():
+    #video_path =  Path("# Your APEX Video")
     assert len(sys.argv) > 1, 'Provide a path to the video file!'
     video_path = Path(sys.argv[1])
     assert video_path.is_file(), f"video_path [{video_path}] not found or is not a file!"
