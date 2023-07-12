@@ -1,4 +1,6 @@
 opencv-python>=4.7.0
+numpy
+openpyxl
 pyarrow
 pandas
 tqdm

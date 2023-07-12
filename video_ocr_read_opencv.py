@@ -58,8 +58,8 @@ def read_apex_video(
             if weapon:
                 ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
                 ammo = ammo_recognize_cv(img_bgr, ammo_maxdigits)
-                if int(frame_num % dmg_sample) == 0:
-                    damage = get_damage_match_tpl(img_bgr, rank_league=rank_league)
+                #if int(frame_num % dmg_sample) == 0:
+                #    damage = get_damage_match_tpl(img_bgr, rank_league=rank_league)
             WEAPONS[frame_num, 0] = weapon
             AMMOS[frame_num, 0] = ammo
             DAMAGES[frame_num, 0] = damage

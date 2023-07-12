@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-from PIL import Image
 from func_img_proc import scale_image
 
 # DMGCUT:L1750,R1830,L95,H120

@@ -27,6 +27,7 @@ def apex_chart_analyze(
     fl_bigdata_path = Path('./BigData/BigData_FiringList.xlsx')
     # 射击状态开关
     shooting = False
+    shooting_weapon = None  # 射击使用武器
     shot_pause_flag = False  # 暂时停火状态
     shot_pause_delay_frames = 0
     SHOT_PAUSE_MAX_DELAY_FRAMES = int(1000 / (1000 / FPS) + 0.5)
@@ -47,7 +48,7 @@ def apex_chart_analyze(
     # damage 全局量
     damage = 0  # 原始OCR数据
     damage_fixed = 0  # 原始数据逻辑修正后
-    damage_before = 0
+    damage_before = -1  # 开火前的右上角伤害，不在开火时写None
     damage_dealt = 0
     damage_start_inserted = False  # 对于从中间截取的视频片段，第一次获取的非零伤害值予以采信
     DAMAGE_MAX_CHECK_FRAMES = 2
@@ -80,37 +81,43 @@ def apex_chart_analyze(
         return img_bgr
 
     def round_report():  # 一梭子汇报
-        nonlocal shooting, shot_pause_flag, ammo_before, weapon_change_done, damage, damage_fixed, damage_dealt, damage_before, firing_list, capture_p
+        nonlocal shooting, shot_pause_flag, ammo_before, weapon_change_done, damage, damage_fixed, damage_dealt, damage_before, firing_list, capture_p, shooting_weapon
         # if not weapon_before:
         #     return None  # 之前没武器
         shot_ammo = ammo_before - ammo_after
-        used_weapon = weapon
-        if weapon_change_done:
-            used_weapon = weapon_before
         # Damage Process
         img_bgr = get_current_img()
         damage = get_damage_match_tpl(img_bgr, rank_league)
-        damage_fixed = damage_correction(damage_fixed, damage)
+        # damage_fixed = damage_correction(damage_fixed, damage)
+        damage_fixed = damage
         damage_dealt = damage_fixed - damage_before
-        assert damage_dealt >= 0, 'Wrong damage_dealt number!'
-        damage_before = damage_fixed
+        #assert damage_dealt >= 0, 'Wrong damage_dealt number!'
+        damage_before = -1
 
         print(
             'frame:{}, 使用{}打掉{}发弹药, DMG总:{}, DMG本次:{}'.format(
-                frame_num, used_weapon, shot_ammo, damage_fixed, damage_dealt
+                frame_num, shooting_weapon, shot_ammo, damage_fixed, damage_dealt
             )
         )
         print(
             'frame:{}, 使用{}打掉{}发弹药, DMG总:{}, DMG本次:{}'.format(
-                frame_num, used_weapon, shot_ammo, damage_fixed, damage_dealt
+                frame_num, shooting_weapon, shot_ammo, damage_fixed, damage_dealt
             ),
             file=txtdata,
         )
 
         firing_list.append(
-            [VIDEO_NAME, firing_start_f, frame_num, used_weapon, shot_ammo, damage_dealt]
+            [
+                str(video_path),
+                firing_start_f,
+                frame_num,
+                shooting_weapon,
+                int(shot_ammo),
+                int(damage_dealt),
+            ]
         )
         shooting = False
+        shooting_weapon = None
         shot_pause_flag = False
         ammo_before = ammo_after
 
@@ -178,7 +185,7 @@ def apex_chart_analyze(
                     weapon_change_delay_frames = 0
                 if not weapon_change_done:
                     continue
-
+            '''
             if DAMAGES[frame_num, 0] != None:  # 整秒
                 damage = DAMAGES[frame_num, 0]
                 if damage_check_frames:
@@ -187,7 +194,7 @@ def apex_chart_analyze(
                     else:
                         capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
                         ret, img_bgr = capture_frame.read()
-                    capture_p += 1
+                    capture_p = frame_num+1
                     damage = get_damage_match_tpl(img_bgr)
                     if damage_check_temp == damage:
                         damage_check_frames -= 1
@@ -200,9 +207,10 @@ def apex_chart_analyze(
                 if not damage_start_inserted and damage and damage_check_frames == 0:
                     damage_check_frames = DAMAGE_MAX_CHECK_FRAMES
                     damage_check_temp = damage
-                damage_fixed = damage_correction(damage_fixed, damage)
+                #damage_fixed = damage_correction(damage_fixed, damage)
+                damage_fixed = damage
                 if not shooting:
-                    damage_before = damage_fixed
+                    damage_before = damage_fixed'''
             ammo = AMMOS[frame_num, 0]
             if ammo != None:
                 # Sign up: Obtain, Reload, Change
@@ -230,6 +238,7 @@ def apex_chart_analyze(
                                         frame_num - FL_FWD_FRAME
                                     )  # 记录开火开始时间
                                 shooting = True
+                                shooting_weapon = weapon
                                 shot_pause_flag = False
                         else:  # 可能情况：换枪、换子弹
                             if shooting:
@@ -254,6 +263,17 @@ def apex_chart_analyze(
                                 print('end shot')
                                 print('end shot', file=txtdata)
                                 round_report()
+        if shooting and not weapon:
+            round_report()
+
+        if shooting and damage_before == -1:
+            capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num - 1)
+            ret, img_bgr = capture_frame.read()
+            assert ret, 'Error reading image in frame {frame_num}!'
+            capture_p = frame_num
+            damage = get_damage_match_tpl(img_bgr)
+            damage_fixed = damage
+            damage_before = damage
 
         # Record EventChart
         # EvnChart.ammo[frame_num,0] = ammo

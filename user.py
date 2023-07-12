@@ -4,8 +4,7 @@ from pathlib import Path
 
 from chart_analyze import apex_chart_analyze
 from video_ocr_read_opencv import read_apex_video
-
-import sys
+from func_input_videos import input_videos
 
 
 def full_analyze_apex_video(
@@ -38,24 +37,23 @@ def full_analyze_apex_video(
 
 
 def main():
-    #video_path =  Path("# Your APEX Video")
-    assert len(sys.argv) > 1, 'Provide a path to the video file!'
-    video_path = Path(sys.argv[1])
-    assert video_path.is_file(), f"video_path [{video_path}] not found or is not a file!"
-
+    # video_path =  Path("# Your APEX Video")
+    video_paths = input_videos()
     evnchart_path = Path('./Temp/event_chart.feather')
     fl_path = Path('./Temp/firing_list.feather')
     original_data_path = Path('./Temp/readdata_original.feather')
-    tic = datetime.now()
-    full_analyze_apex_video(
-        video_path,
-        output_fl_path=fl_path,
-        output_evnchart_path=evnchart_path,
-        output_original_path=original_data_path,
-    )
+    for video_path in video_paths:
+        print(video_path)
+        tic = datetime.now()
+        full_analyze_apex_video(
+            video_path,
+            output_fl_path=fl_path,
+            output_evnchart_path=evnchart_path,
+            output_original_path=original_data_path,
+        )
 
-    toc = datetime.now()
-    print(f'Elapsed time: {(toc - tic).total_seconds()} seconds')
+        toc = datetime.now()
+        print(f'Elapsed time: {(toc - tic).total_seconds()} seconds')
 
 
 if __name__ == '__main__':
