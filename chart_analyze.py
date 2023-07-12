@@ -23,7 +23,6 @@ def apex_chart_analyze(
     FL_FWD_FRAME: int = 9,  # 开火提前记录帧数（而不是弹药减少了才开始记录）
     saveto_bigdata: bool = False,  # 保存至个人大数据
 ):
-    VIDEO_NAME = video_path.name
     fl_bigdata_path = Path('./BigData/BigData_FiringList.xlsx')
     # 射击状态开关
     shooting = False
@@ -77,7 +76,7 @@ def apex_chart_analyze(
         else:
             capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
             ret, img_bgr = capture_frame.read()
-        capture_p += 1
+        capture_p = frame_num + 1
         return img_bgr
 
     def round_report():  # 一梭子汇报
@@ -91,7 +90,7 @@ def apex_chart_analyze(
         # damage_fixed = damage_correction(damage_fixed, damage)
         damage_fixed = damage
         damage_dealt = damage_fixed - damage_before
-        #assert damage_dealt >= 0, 'Wrong damage_dealt number!'
+        # assert damage_dealt >= 0, 'Wrong damage_dealt number!'
         damage_before = -1
 
         print(
@@ -160,6 +159,8 @@ def apex_chart_analyze(
     evn_chart = event_chart(total_frames=TOTAL_FRAMES)
     for frame_num in range(TOTAL_FRAMES):
         weapon = WEAPONS[frame_num, 0]
+        damage = DAMAGES[frame_num, 0]
+        damage_fixed = damage
         if weapon:
             if weapon != weapon_hold:  # 装备变更控制环节
                 if weapon_change:  # 在变更
@@ -269,11 +270,14 @@ def apex_chart_analyze(
         if shooting and damage_before == -1:
             capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num - 1)
             ret, img_bgr = capture_frame.read()
-            assert ret, 'Error reading image in frame {frame_num}!'
+            assert ret, f'Error reading image in frame {frame_num}!'
             capture_p = frame_num
-            damage = get_damage_match_tpl(img_bgr)
-            damage_fixed = damage
-            damage_before = damage
+            damage_lastframe = get_damage_match_tpl(img_bgr)
+            damage_fixed_lastframe = damage_lastframe
+            damage_before = damage_lastframe
+            evn_chart.damage[frame_num - 1, 0] = damage_lastframe
+            evn_chart.damage_fixed[frame_num - 1, 0] = damage_fixed_lastframe
+            evn_chart.damage_before[frame_num - 1, 0] = damage_before
 
         # Record EventChart
         # EvnChart.ammo[frame_num,0] = ammo
