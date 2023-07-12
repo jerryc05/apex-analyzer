@@ -28,7 +28,6 @@ def read_apex_video(
     capture: Any = cv2.VideoCapture(str(video_path))
     total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(capture.get(cv2.CAP_PROP_FPS))
-    dmg_sample = fps / dmg_sample_hz
 
     frame_num = 0
 
@@ -58,15 +57,11 @@ def read_apex_video(
             if weapon:
                 ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
                 ammo = ammo_recognize_cv(img_bgr, ammo_maxdigits)
-                #if int(frame_num % dmg_sample) == 0:
-                #    damage = get_damage_match_tpl(img_bgr, rank_league=rank_league)
             WEAPONS[frame_num, 0] = weapon
             AMMOS[frame_num, 0] = ammo
             DAMAGES[frame_num, 0] = damage
             FRAMES[frame_num, 0] = frame_num
 
-            # if frame_num % 2000 == 0:
-            #     print(f'{frame_num} / {total_frames} frames')
             frame_num += 1
             pbar.update(frame_num - pbar.n)
     ori_dtf = pd.DataFrame(

@@ -7,6 +7,7 @@ import pandas as pd
 
 import weapon_dict
 from damage_ocr import damage_correction, get_damage_match_tpl
+from func_input_videos import input_videos
 
 
 def apex_chart_analyze(
@@ -49,10 +50,6 @@ def apex_chart_analyze(
     damage_fixed = 0  # 原始数据逻辑修正后
     damage_before = -1  # 开火前的右上角伤害，不在开火时写None
     damage_dealt = 0
-    damage_start_inserted = False  # 对于从中间截取的视频片段，第一次获取的非零伤害值予以采信
-    DAMAGE_MAX_CHECK_FRAMES = 2
-    damage_check_frames = 0
-    damage_check_temp = 0
 
     # 开火报表
     firing_list = (
@@ -161,6 +158,7 @@ def apex_chart_analyze(
         weapon = WEAPONS[frame_num, 0]
         damage = DAMAGES[frame_num, 0]
         damage_fixed = damage
+
         if weapon:
             if weapon != weapon_hold:  # 装备变更控制环节
                 if weapon_change:  # 在变更
@@ -186,32 +184,7 @@ def apex_chart_analyze(
                     weapon_change_delay_frames = 0
                 if not weapon_change_done:
                     continue
-            '''
-            if DAMAGES[frame_num, 0] != None:  # 整秒
-                damage = DAMAGES[frame_num, 0]
-                if damage_check_frames:
-                    if capture_p == frame_num:
-                        ret, img_bgr = capture_frame.read()
-                    else:
-                        capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-                        ret, img_bgr = capture_frame.read()
-                    capture_p = frame_num+1
-                    damage = get_damage_match_tpl(img_bgr)
-                    if damage_check_temp == damage:
-                        damage_check_frames -= 1
-                        if damage_check_frames == 0:
-                            damage_start_inserted = True
-                            damage_fixed = damage
-                    else:
-                        damage_check_temp = damage
-                        damage_check_frames = DAMAGE_MAX_CHECK_FRAMES
-                if not damage_start_inserted and damage and damage_check_frames == 0:
-                    damage_check_frames = DAMAGE_MAX_CHECK_FRAMES
-                    damage_check_temp = damage
-                #damage_fixed = damage_correction(damage_fixed, damage)
-                damage_fixed = damage
-                if not shooting:
-                    damage_before = damage_fixed'''
+
             ammo = AMMOS[frame_num, 0]
             if ammo != None:
                 # Sign up: Obtain, Reload, Change
@@ -268,16 +241,20 @@ def apex_chart_analyze(
             round_report()
 
         if shooting and damage_before == -1:
-            capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num - 1)
-            ret, img_bgr = capture_frame.read()
-            assert ret, f'Error reading image in frame {frame_num}!'
-            capture_p = frame_num
+            forward_frame = 0  # 采样超前量
+            ret = False
+            while not ret and frame_num >= forward_frame:
+                forward_frame += 1
+                capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num - forward_frame)
+                ret, img_bgr = capture_frame.read()
+            assert ret, f'Error reading image in frame {frame_num-forward_frame}!'
+            capture_p = frame_num - forward_frame + 1
             damage_lastframe = get_damage_match_tpl(img_bgr)
             damage_fixed_lastframe = damage_lastframe
             damage_before = damage_lastframe
-            evn_chart.damage[frame_num - 1, 0] = damage_lastframe
-            evn_chart.damage_fixed[frame_num - 1, 0] = damage_fixed_lastframe
-            evn_chart.damage_before[frame_num - 1, 0] = damage_before
+            evn_chart.damage[frame_num - forward_frame, 0] = damage_lastframe
+            evn_chart.damage_fixed[frame_num - forward_frame, 0] = damage_fixed_lastframe
+            evn_chart.damage_before[frame_num - forward_frame, 0] = damage_before
 
         # Record EventChart
         # EvnChart.ammo[frame_num,0] = ammo
@@ -382,7 +359,7 @@ def apex_chart_analyze(
 
 if __name__ == '__main__':
     # 如果对视频读取的结果有修改，在这里单独运行分析部分
-    vid_path = Path('# Your APEX Video')  # Your APEX Video
+    vid_path = input_videos()[0]
     # ORIGINAL_DATA = pd.read_excel('./Temp/ReadData_Original.xlsx').values
     original_data = pd.read_feather('./Temp/readdata_original.feather').values
     FRAMES = original_data[:, 0:1]

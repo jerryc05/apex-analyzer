@@ -32,9 +32,14 @@ def cut_dmg_logo_match_tpl(
     img: np.ndarray[int, np.dtype[np.uint8]]
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
     if len(img.shape) > 2:
+        img_red = img[:, :, 2]
+        img_red = cv2.threshold(img_red, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    res = cv2.matchTemplate(img, DMG_REF, cv2.TM_CCOEFF_NORMED)
+    try:
+        res = cv2.matchTemplate(img_red, DMG_REF, cv2.TM_CCOEFF_NORMED)
+    except:
+        res = cv2.matchTemplate(img, DMG_REF, cv2.TM_CCOEFF_NORMED)
     loc = np.where(res == np.max(res))[1][0]  # xtick
     # print('Max Simulation: {}'.format(np.max(res)))
     return img[:, loc + w_ref :]
@@ -73,7 +78,7 @@ def split_dmg_digits(img: np.ndarray[int, np.dtype[np.uint8]]) -> list():  # 分
                 return list()
             _ret.append(img_cut[:, _first_index : _last_index + 1])
             _renew = True
-            if _index - _last_index >= 10:#后面没数字了
+            if _index - _last_index >= 10:  # 后面没数字了
                 return _ret
     if not _renew:
         if _last_index - _first_index > 9:
@@ -89,6 +94,8 @@ def dmg_digit_recognize(
     _h, _w = img.shape
     if _w > 10 or _w < 2:  # 噪点或多位数字
         return None
+    if np.max(img) == 0 or np.min(img) == 255:  # 全黑
+        return None
     img_hstacked = np.hstack(
         (255 * np.ones([_h, 2], dtype=np.uint8), img, 255 * np.ones([_h, 2], dtype=np.uint8))
     )
@@ -98,7 +105,7 @@ def dmg_digit_recognize(
     max_sim_not1_num = 0
     for _p in range(10):
         num_sim = np.max(cv2.matchTemplate(img_hstacked, DMG_NUM[_p], cv2.TM_CCOEFF_NORMED))
-        #print('{} similarity: {}'.format(_p, num_sim))
+        # print('{} similarity: {}'.format(_p, num_sim))
         if num_sim > max_sim:
             max_sim = num_sim
             max_sim_num = _p
@@ -108,29 +115,28 @@ def dmg_digit_recognize(
     if max_sim_num == 1 and _w <= 6:  # 判1
         return 1
     if max_sim_not1_num == 8:
-        #判6
+        # 判6
         __block_cnt = 0
         __last_pos = -2
-        for __p in range(_w):
+        for __p in range(int(_w / 2) - 1, _w):
             if img[4, __p] == 0:
                 if __p - __last_pos > 1:
                     __block_cnt += 1
                 __last_pos = __p
-        if __block_cnt == 1:
+        if __block_cnt == 0:
             return 6
-        #判9
+        # 判9
         __block_cnt = 0
         __last_pos = -2
-        for __p in range(_w):
+        for __p in range(int(_w / 2) + 1):
             if img[8, __p] == 0:
                 if __p - __last_pos > 1:
                     __block_cnt += 1
                 __last_pos = __p
-        if __block_cnt == 1:
+        if __block_cnt == 0:
             return 9
         return 8
     return max_sim_not1_num
-
 
 
 def get_damage_match_tpl(
@@ -231,7 +237,7 @@ def test_split_train_img() -> None:
 
 
 def main() -> None:
-    sourcedir = Path('./Temp/dmg_testdata')
+    sourcedir = Path('./Temp/key_capture')
     destdir = Path('./Temp/recognize_test')
     if destdir.is_dir():
         for item in destdir.rglob('*'):
@@ -242,11 +248,12 @@ def main() -> None:
     discards = 0
     cnt = 0
     for img_path in sourcedir.rglob('*.png'):
-        img_gray = cv2.imread(str(img_path), 0)
-        img_cut = post_process_img(cut_dmg_logo_match_tpl(dmg_area_select(img_gray)))
+        img_bgr = cv2.imread(str(img_path))
+        img_red = dmg_area_select(img_bgr)[:, :, 2]
+        img_cut = post_process_img(cut_dmg_logo_match_tpl(dmg_area_select(img_bgr)))
         cnt += 1
         dmg_real = int(img_path.stem.split('_')[0])
-        dmg_read = get_damage_match_tpl(img_gray, None)
+        dmg_read = get_damage_match_tpl(img_bgr, None)
         if not dmg_read == dmg_real:
             if dmg_read is None:
                 discards += 1
@@ -262,6 +269,17 @@ def main() -> None:
                     + str(cnt)
                     + ').png',
                     img_cut,
+                )
+                cv2.imwrite(
+                    str(destdir)
+                    + '/'
+                    + str(dmg_read)
+                    + '_'
+                    + str(dmg_real)
+                    + '('
+                    + str(cnt)
+                    + ')_red.png',
+                    img_red,
                 )
     print('{} images read, {} errs, {} discards!'.format(cnt, errs, discards))
 
