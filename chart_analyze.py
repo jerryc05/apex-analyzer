@@ -351,10 +351,12 @@ def apex_chart_analyze(
     if saveto_bigdata:
         try:
             fl_bigdata = pd.read_excel(fl_bigdata_path)
-            fl_bigdata = fl_bigdata.append(fl_dtf, ignore_index=True)
-            fl_bigdata.to_excel(fl_bigdata, index=None)
+            fl_bigdata = pd.concat([fl_dtf, fl_bigdata], axis=0, ignore_index=True)
+            fl_bigdata.to_excel(fl_bigdata_path, index=None)
+            print('Successfully added bigdata items!')
         except:
             fl_dtf.to_excel(fl_bigdata_path, index=None)
+            print('New bigdata created!')
 
 
 if __name__ == '__main__':
@@ -381,4 +383,5 @@ if __name__ == '__main__':
         EVN_CHART_PATH,
         FL_PATH,
         None,
+        saveto_bigdata=True,
     )
