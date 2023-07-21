@@ -6,6 +6,9 @@ import numpy as np
 import weapon_dict
 from operator import itemgetter
 from pathlib import Path
+import random
+from typing import cast
+import numpy.typing as npt
 
 
 def frame2time(frame: int, fps=60) -> str:
@@ -42,12 +45,66 @@ def style_cook(original_list):  # 马
     return original_list[args, :]
 
 
-def main(style=None):
-    firing_list = pd.read_excel('./BigData/BigData_FiringList.xlsx').values
-    if style == 'normal':
-        firing_list = style_normal(firing_list)
-    if style == 'cook':
-        firing_list = style_cook(firing_list)
+def style_b_random_single_round(original_list):  # 一发一剪，两发之间尽量不用同一梭子
+    def record_item(_index: int) -> None:
+        nonlocal _chosen, used_videos, _last_frame, usage, args
+        _chosen = True
+        used_videos.append(_video)
+        _last_frame = cast(int, end_frame[_index])
+        usage[_index] = 1
+        args.append(_index)
+
+    args = []
+    usage = np.zeros(len(original_list), dtype=np.uint8)
+    video_path = original_list[:, 0]
+    start_frame = cast(npt.NDArray[np.uint64], original_list[:, 1])
+    end_frame = cast(npt.NDArray[np.uint64], original_list[:, 2])
+    ammo_before = original_list[:, 6]
+    max_ammo = np.max(ammo_before)
+    _ammo_indices = np.where(ammo_before == max_ammo)[0]
+    _index = cast(int, random.choice(_ammo_indices))
+    _video = cast(str, video_path[_index])
+    used_videos = [_video]  # 已使用视频
+    _last_frame = cast(int, end_frame[_index])
+    usage[_index] = 1
+    args.append(_index)
+    for _ammo in range(max_ammo - 1, -1, -1):
+        _ammo_indices = np.where(ammo_before == _ammo)[0]
+        np.random.shuffle(_ammo_indices)  # 随机优先级
+        # 先取没用过的视频
+        _chosen = False
+        for _index in _ammo_indices:
+            _video = video_path[_index]
+            if _video in used_videos:
+                continue
+            record_item(_index)
+            break
+        if _chosen:
+            continue
+        for _index in _ammo_indices:
+            _start_frame = cast(int, end_frame[_index])
+            if _start_frame == _last_frame:
+                continue
+            record_item(_index)
+            break
+        if _chosen:
+            continue
+        _index = _ammo_indices[0]
+        record_item(_index)
+    return original_list[args, :]
+
+
+# source:r = using "BigData_FiringList.xlsx", b = using "bullet_list.xlsx"
+def main(source: str = 'r', style: str | None = None):
+    if source == 'r':
+        firing_list = pd.read_excel('./BigData/BigData_FiringList.xlsx').values
+        if style == 'normal':
+            firing_list = style_normal(firing_list)
+        if style == 'cook':
+            firing_list = style_cook(firing_list)
+    if source == 'b':
+        original_firing_list = pd.read_excel('./BigData/bullet_list.xlsx').values
+        firing_list = style_b_random_single_round(original_firing_list)
     MAXVIDS = len(firing_list)
     mtx_clipitem = np.zeros([MAXVIDS, 7], dtype=np.uint32)
     mtx_in = firing_list[:, 1]
@@ -408,4 +465,4 @@ def main(style=None):
 
 
 if __name__ == '__main__':
-    main(style='normal')
+    main(source='b', style='normal')
