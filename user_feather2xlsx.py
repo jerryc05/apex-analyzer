@@ -4,18 +4,15 @@ import pandas as pd
 
 
 def main() -> None:
-    input_file_path = Path('./Temp/event_chart.feather')
-    output_file_path = Path('./Temp/event_chart.xlsx')
-    dtf = pd.read_feather(input_file_path)
-    dtf.to_excel(output_file_path, index=False)
-    input_file_path = Path('./Temp/readdata_original.feather')
-    output_file_path = Path('./Temp/readdata_original.xlsx')
-    dtf = pd.read_feather(input_file_path)
-    dtf.to_excel(output_file_path, index=False)
-    input_file_path = Path('./Temp/firing_list.feather')
-    output_file_path = Path('./Temp/firing_list.xlsx')
-    dtf = pd.read_feather(input_file_path)
-    dtf.to_excel(output_file_path, index=False)
+    for filename in ['./Temp/event_chart', './Temp/readdata_original', './Temp/firing_list']:
+        input_file_path = Path(filename + '.feather')
+        if input_file_path.is_file():
+            output_file_path = Path(filename + '.xlsx')
+            dtf = pd.read_feather(input_file_path)
+            dtf.to_excel(output_file_path, index=False)
+            print('{}.xlsx generated successfully!'.format(filename))
+        else:
+            print('{}.feather not found!'.format(filename))
 
 
 if __name__ == '__main__':

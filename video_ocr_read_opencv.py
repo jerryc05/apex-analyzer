@@ -14,6 +14,7 @@ import weapon_dict
 from ammo_ocr import ammo_recognize_cv
 from damage_ocr import get_damage_match_tpl
 from weapon_recognize import weapon_recognize
+from func_input_videos import input_videos
 
 
 def read_apex_video(
@@ -64,6 +65,10 @@ def read_apex_video(
 
             frame_num += 1
             pbar.update(frame_num - pbar.n)
+    WEAPONS = WEAPONS[0:frame_num, :]
+    AMMOS = AMMOS[0:frame_num, :]
+    DAMAGES = DAMAGES[0:frame_num, :]
+    FRAMES = FRAMES[0:frame_num, :]
     ori_dtf = pd.DataFrame(
         np.hstack((FRAMES, WEAPONS, AMMOS, DAMAGES)),
         columns=['FRAME', 'WEAPON', 'AMMO', 'DAMAGE'],
@@ -72,11 +77,11 @@ def read_apex_video(
         ori_dtf.to_excel(output_original_data, index=False)
     if output_original_data.suffix == '.feather':
         ori_dtf.to_feather(output_original_data)
-    return FRAMES, WEAPONS, AMMOS, DAMAGES, total_frames, fps
+    return FRAMES, WEAPONS, AMMOS, DAMAGES, frame_num, fps
 
 
 def main():
-    vid_path = Path('##your apex video')
+    vid_path = Path(input_videos()[0])
     output_original_data = Path('./Temp/readdata_original.feather')
     tic = datetime.now()
     read_apex_video(video_path=vid_path, output_original_data=output_original_data)
