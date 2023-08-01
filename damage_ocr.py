@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 import cv2
 from func_img_proc import scale_image
@@ -29,13 +30,13 @@ def dmg_area_select(
 
 
 def cut_dmg_logo_match_tpl(
-    img: np.ndarray[int, np.dtype[np.uint8]]
+    img: np.ndarray[int, np.dtype[np.uint8]], threshold_val=165
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
     if len(img.shape) > 2:
         img_red = img[:, :, 2]
         img_red = cv2.threshold(img_red, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
+    img = cv2.threshold(img, threshold_val, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
     try:
         res = cv2.matchTemplate(img_red, DMG_REF, cv2.TM_CCOEFF_NORMED)
     except:
@@ -140,10 +141,12 @@ def dmg_digit_recognize(
 
 
 def get_damage_match_tpl(
-    img: np.ndarray[int, np.dtype[np.uint8]], rank_league: bool | None = None
+    img: np.ndarray[int, np.dtype[np.uint8]],
+    rank_league: bool | None = None,
+    threshold_val=190,
 ) -> int:
     img_cut = dmg_area_select(img, rank_league=rank_league)
-    img_dmgnum = cut_dmg_logo_match_tpl(img_cut)
+    img_dmgnum = cut_dmg_logo_match_tpl(img_cut, threshold_val=threshold_val)
     if img_dmgnum.shape[1] == 0:
         return 0
     img_dmgnum = post_process_img(img_dmgnum)
@@ -236,14 +239,17 @@ def test_split_train_img() -> None:
     print('{} images processed!'.format(cnt))
 
 
-def main() -> None:
+def key_capture_test(
+    threshold_val: int = 165, output_errs_img: bool = True
+) -> Tuple[int, int, int]:
     sourcedir = Path('./Temp/key_capture')
     destdir = Path('./Temp/recognize_test')
-    if destdir.is_dir():
-        for item in destdir.rglob('*'):
-            item.unlink()
-        destdir.rmdir()
-    destdir.mkdir(parents=True, exist_ok=True)
+    if output_errs_img:
+        if destdir.is_dir():
+            for item in destdir.rglob('*'):
+                item.unlink()
+            destdir.rmdir()
+        destdir.mkdir(parents=True, exist_ok=True)
     errs = 0
     discards = 0
     cnt = 0
@@ -253,36 +259,39 @@ def main() -> None:
         img_cut = post_process_img(cut_dmg_logo_match_tpl(dmg_area_select(img_bgr)))
         cnt += 1
         dmg_real = int(img_path.stem.split('_')[0])
-        dmg_read = get_damage_match_tpl(img_bgr, None)
+        dmg_read = get_damage_match_tpl(img_bgr, None, threshold_val=threshold_val)
         if not dmg_read == dmg_real:
             if dmg_read is None:
                 discards += 1
             else:
                 errs += 1
-                cv2.imwrite(
-                    str(destdir)
-                    + '/'
-                    + str(dmg_read)
-                    + '_'
-                    + str(dmg_real)
-                    + '('
-                    + str(cnt)
-                    + ').png',
-                    img_cut,
-                )
-                cv2.imwrite(
-                    str(destdir)
-                    + '/'
-                    + str(dmg_read)
-                    + '_'
-                    + str(dmg_real)
-                    + '('
-                    + str(cnt)
-                    + ')_red.png',
-                    img_red,
-                )
-    print('{} images read, {} errs, {} discards!'.format(cnt, errs, discards))
+                if output_errs_img:
+                    cv2.imwrite(
+                        str(destdir)
+                        + '/'
+                        + str(dmg_read)
+                        + '_'
+                        + str(dmg_real)
+                        + '('
+                        + str(cnt)
+                        + ').png',
+                        img_cut,
+                    )
+                    cv2.imwrite(
+                        str(destdir)
+                        + '/'
+                        + str(dmg_read)
+                        + '_'
+                        + str(dmg_real)
+                        + '('
+                        + str(cnt)
+                        + ')_red.png',
+                        img_red,
+                    )
+    if output_errs_img:
+        print('{} images read, {} errs, {} discards!'.format(cnt, errs, discards))
+    return cnt - errs - discards, errs, discards
 
 
 if __name__ == '__main__':
-    main()
+    key_capture_test()
