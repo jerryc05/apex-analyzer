@@ -59,7 +59,8 @@ def style_b_random_single_round(original_list):  # 一发一剪，两发之间�
     video_path = original_list[:, 0]
     start_frame = cast(npt.NDArray[np.uint64], original_list[:, 1])
     end_frame = cast(npt.NDArray[np.uint64], original_list[:, 2])
-    ammo_before = original_list[:, 6]
+    damage = cast(npt.NDArray[np.int64], original_list[:, 5])
+    ammo_before = cast(npt.NDArray[np.uint64], original_list[:, 6])
     max_ammo = np.max(ammo_before)
     _ammo_indices = np.where(ammo_before == max_ammo)[0]
     _index = cast(int, random.choice(_ammo_indices))
@@ -70,7 +71,12 @@ def style_b_random_single_round(original_list):  # 一发一剪，两发之间�
     args.append(_index)
     for _ammo in range(max_ammo - 1, -1, -1):
         _ammo_indices = np.where(ammo_before == _ammo)[0]
+        if not _ammo_indices.size:
+            continue
         np.random.shuffle(_ammo_indices)  # 随机优先级
+        nonzero_damage = np.where(damage[_ammo_indices])
+        zero_damage = np.where(damage[_ammo_indices]==0)
+        _ammo_indices = _ammo_indices[np.hstack((nonzero_damage, zero_damage))][0,:]
         # 先取没用过的视频
         _chosen = False
         for _index in _ammo_indices:

@@ -6,4 +6,4 @@ Output/
 Temp/
 BigData/
 input_videos.txt
-POCs_analyze.py
+^dev_*$

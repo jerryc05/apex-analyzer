@@ -38,8 +38,10 @@ def bullet_capture(weapon: str = '*') -> None:
                     assert ret, 'No image!'
                     if not _weapon_using:
                         weapon, wpsim = weapon_recognize(img_bgr)
-                        ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
-                        _weapon_using = True
+                        if weapon:
+                            ammo_maxdigits = weapon_dict.weapon_dict[weapon].max_ammo_digits
+                            bps = weapon_dict.weapon_dict[weapon].bullets_per_shot
+                            _weapon_using = True
                     ammo = ammo_recognize_cv(img_bgr, ammo_maxdigits)
                     if _ammo_before == -1:  # 未登录
                         _ammo_before = ammo
@@ -47,16 +49,10 @@ def bullet_capture(weapon: str = '*') -> None:
                         _damage_before = get_damage_match_tpl(img_bgr)
                     if ammo != _ammo_before:  # 减少了，保存整段
                         if ammo is None:
-                            ammo = (
-                                _ammo_before - weapon_dict.weapon_dict[weapon].bullets_per_shot
-                            )
+                            ammo = _ammo_before - bps
                         _end_frame = _capture_p
                         _damage_after = get_damage_match_tpl(img_bgr)
-                        if (
-                            ammo
-                            == _ammo_before - weapon_dict.weapon_dict[weapon].bullets_per_shot
-                            or ammo == _ammo_before
-                        ):
+                        if ammo == _ammo_before - bps or ammo == _ammo_before:
                             _temp_list.append(
                                 [
                                     str(video_path),
@@ -108,4 +104,4 @@ def bullet_capture(weapon: str = '*') -> None:
 
 
 if __name__ == '__main__':
-    bullet_capture('平行')
+    bullet_capture('CAR')
