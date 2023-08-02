@@ -5,6 +5,7 @@ from pathlib import Path
 from chart_analyze import apex_chart_analyze
 from video_ocr_read_opencv import read_apex_video
 from func_input_videos import input_videos
+import multiprocessing
 
 
 def full_analyze_apex_video(
@@ -13,6 +14,8 @@ def full_analyze_apex_video(
     output_fl_path: Path,
     output_original_path: Path,
     rank_league: bool | None = None,
+    start_frame: int | None = None,
+    end_frame: int | None = None,
 ):
     Path('./Temp').mkdir(parents=True, exist_ok=True)
     Path('./BigData').mkdir(parents=True, exist_ok=True)
@@ -20,7 +23,8 @@ def full_analyze_apex_video(
     FRAMES, WEAPONS, AMMOS, DAMAGES, total_frames, fps = read_apex_video(
         video_path=video_path,
         output_original_data=output_original_path,
-        rank_league=rank_league,
+        start_frame=start_frame,
+        end_frame=end_frame,
     )
     apex_chart_analyze(
         video_path=video_path,
@@ -37,19 +41,27 @@ def full_analyze_apex_video(
 
 
 def main():
-    # video_path =  Path("# Your APEX Video")
     video_paths = input_videos()
     evnchart_path = Path('./Temp/event_chart.feather')
     fl_path = Path('./Temp/firing_list.feather')
     original_data_path = Path('./Temp/readdata_original.feather')
-    for video_path in video_paths:
+    for video_info in video_paths:
+        video_path = video_info[0]
+        start_frame = None
+        end_frame = None
+        if len(video_info) == 3:
+            start_frame = video_info[1]
+            end_frame = video_info[2]
         print(video_path)
+
         tic = datetime.now()
         full_analyze_apex_video(
             video_path,
             output_fl_path=fl_path,
             output_evnchart_path=evnchart_path,
             output_original_path=original_data_path,
+            start_frame=start_frame,
+            end_frame=end_frame,
         )
 
         toc = datetime.now()
@@ -57,4 +69,29 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    video_paths = input_videos()
+    evnchart_path = Path('./Temp/event_chart.feather')
+    fl_path = Path('./Temp/firing_list.feather')
+    original_data_path = Path('./Temp/readdata_original.feather')
+    for video_info in video_paths:
+        video_path = video_info[0]
+        start_frame = None
+        end_frame = None
+        if len(video_info) == 3:
+            start_frame = video_info[1]
+            end_frame = video_info[2]
+        print(video_path)
+        frames_count = multiprocessing.Value('d', 0)
+
+        tic = datetime.now()
+        full_analyze_apex_video(
+            video_path,
+            output_fl_path=fl_path,
+            output_evnchart_path=evnchart_path,
+            output_original_path=original_data_path,
+            start_frame=start_frame,
+            end_frame=end_frame,
+        )
+
+        toc = datetime.now()
+        print(f'Elapsed time: {(toc - tic).total_seconds()} seconds')

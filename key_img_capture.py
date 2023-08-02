@@ -21,7 +21,7 @@ def clear_documents() -> None:
 
 
 def capture_nonzerodmg_imgs() -> None:
-    video_path = input_videos()[0]
+    video_path = input_videos()[0][0]
     capture = cv2.VideoCapture(str(video_path))
     original_data_path = Path('./Temp/readdata_original.feather')
     original_data = pd.read_feather(str(original_data_path)).values

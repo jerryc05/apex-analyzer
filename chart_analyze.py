@@ -154,9 +154,10 @@ def apex_chart_analyze(
             self.damage_dealt = np.zeros([total_frames, 1], dtype=np.uint16)
 
     evn_chart = event_chart(total_frames=TOTAL_FRAMES)
-    for frame_num in range(TOTAL_FRAMES):
-        weapon = WEAPONS[frame_num, 0]
-        damage = DAMAGES[frame_num, 0]
+    for _p_frame in range(TOTAL_FRAMES):
+        frame_num = FRAMES[_p_frame, 0]  # _p_frame用于填表，frame_num用于识图
+        weapon = WEAPONS[_p_frame, 0]
+        damage = DAMAGES[_p_frame, 0]
         damage_fixed = damage
 
         if weapon:
@@ -185,7 +186,7 @@ def apex_chart_analyze(
                 if not weapon_change_done:
                     continue
 
-            ammo = AMMOS[frame_num, 0]
+            ammo = AMMOS[_p_frame, 0]
             if ammo != None:
                 # Sign up: Obtain, Reload, Change
                 if weapon_change_done:  # 换了
@@ -201,9 +202,7 @@ def apex_chart_analyze(
                 else:  # 没换
                     # Shoot
                     if ammo < ammo_after:  # 子弹少了
-                        bps = weapon_dict.weapon_dict[
-                            weapon
-                        ].bullets_per_shot  # 三重3，滋蹦2，其余1
+                        bps = weapon_dict.weapon_dict[weapon].bullets_per_shot  # 滋蹦2，其余1
                         if ammo_after - ammo <= bps:  # 可能情况：射击、换枪
                             ammo_after = ammo
                             if not weapon_change:
@@ -252,29 +251,29 @@ def apex_chart_analyze(
             damage_lastframe = get_damage_match_tpl(img_bgr)
             damage_fixed_lastframe = damage_lastframe
             damage_before = damage_lastframe
-            evn_chart.damage[frame_num - forward_frame, 0] = damage_lastframe
-            evn_chart.damage_fixed[frame_num - forward_frame, 0] = damage_fixed_lastframe
-            evn_chart.damage_before[frame_num - forward_frame, 0] = damage_before
+            evn_chart.damage[_p_frame - forward_frame, 0] = damage_lastframe
+            evn_chart.damage_fixed[_p_frame - forward_frame, 0] = damage_fixed_lastframe
+            evn_chart.damage_before[_p_frame - forward_frame, 0] = damage_before
 
         # Record EventChart
         # EvnChart.ammo[frame_num,0] = ammo
-        evn_chart.ammo_after[frame_num, 0] = ammo_after
-        evn_chart.ammo_before[frame_num, 0] = ammo_before
+        evn_chart.ammo_after[_p_frame, 0] = ammo_after
+        evn_chart.ammo_before[_p_frame, 0] = ammo_before
         # EvnChart.frame[frame_num,0] = frame_num
-        evn_chart.shooting[frame_num, 0] = shooting
-        evn_chart.shot_pause_delayframes[frame_num, 0] = shot_pause_delay_frames
-        evn_chart.shot_pause_flag[frame_num, 0] = shot_pause_flag
+        evn_chart.shooting[_p_frame, 0] = shooting
+        evn_chart.shot_pause_delayframes[_p_frame, 0] = shot_pause_delay_frames
+        evn_chart.shot_pause_flag[_p_frame, 0] = shot_pause_flag
         # EvnChart.weapon[frame_num,0] = weapon
-        evn_chart.weapon_before[frame_num, 0] = weapon_before
-        evn_chart.weapon_hold[frame_num, 0] = weapon_hold
-        evn_chart.weapon_temp[frame_num, 0] = weapon_temp
-        evn_chart.weapon_change[frame_num, 0] = weapon_change
-        evn_chart.weapon_change_delayframes[frame_num, 0] = weapon_change_delay_frames
-        evn_chart.weapon_change_done[frame_num, 0] = weapon_change_done
-        evn_chart.damage[frame_num, 0] = damage
-        evn_chart.damage_fixed[frame_num, 0] = damage_fixed
-        evn_chart.damage_before[frame_num, 0] = damage_before
-        evn_chart.damage_dealt[frame_num, 0] = damage_dealt
+        evn_chart.weapon_before[_p_frame, 0] = weapon_before
+        evn_chart.weapon_hold[_p_frame, 0] = weapon_hold
+        evn_chart.weapon_temp[_p_frame, 0] = weapon_temp
+        evn_chart.weapon_change[_p_frame, 0] = weapon_change
+        evn_chart.weapon_change_delayframes[_p_frame, 0] = weapon_change_delay_frames
+        evn_chart.weapon_change_done[_p_frame, 0] = weapon_change_done
+        evn_chart.damage[_p_frame, 0] = damage
+        evn_chart.damage_fixed[_p_frame, 0] = damage_fixed
+        evn_chart.damage_before[_p_frame, 0] = damage_before
+        evn_chart.damage_dealt[_p_frame, 0] = damage_dealt
         # End Loop
         if weapon_change_done:
             weapon_change_done = False
@@ -361,7 +360,7 @@ def apex_chart_analyze(
 
 if __name__ == '__main__':
     # 如果对视频读取的结果有修改，在这里单独运行分析部分
-    vid_path = input_videos()[0]
+    vid_path = input_videos()[0][0]
     # ORIGINAL_DATA = pd.read_excel('./Temp/ReadData_Original.xlsx').values
     original_data = pd.read_feather('./Temp/readdata_original.feather').values
     FRAMES = original_data[:, 0:1]

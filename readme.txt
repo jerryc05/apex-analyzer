@@ -1,8 +1,12 @@
-皮の派派录像分析工具——Analyzer for Apex Legends beta0.32
+皮の派派录像分析工具——Analyzer for Apex Legends beta0.33
 经过jerryc05的拷打，代码相比第一版舒服不少了已经（bushi
 可以通过Apex录像了解您的表现
 目前已经实现了记录开火时刻与xml剪辑表输出（尽管伤害识别那么没准确（在调了在调了……
 开发用源素材分辨率1920*1080,60p，目前支持1920*1080与2560*1600分辨率
+
+
+2023.08.02 Upd 0.33:
+1.更新片段读取功能————对指定了开始结束帧的视频，只读取对应区间
 
 
 2023.08.01 Upd 0.32:
@@ -46,6 +50,7 @@ debuging:尝试摆脱tesseract的依赖
 
 文件介绍
 ammo_ocr: 弹药量识别文件
+bullet_capture: 一发一剪解析程序
 chart_analyze: 分析从视频读出的数据（默认Temp\readdata_original.feather），生成数据报表（默认在Temp\EventChart.xlsx与Temp\firing_list.feather，同时可以将开火记录累积到BigData\BigData_FiringList.xlsx）
 damage_ocr: 伤害数字识别，目前需要手动确定该视频来自匹配还是排位（懒dsr）
 （注：需要手动定位Tesseract-OCR文件位置）
@@ -60,6 +65,10 @@ xml_maker: 剪辑表自动生成
 使用方法
 1. 打开cmd定位到程序文件夹根目录
 2. pip install -r "requirements.txt"
-3. python user.py "You APEX Video File" 或在根目录新建input_videos.txt，输入需要解析的视频地址
+3. 输入需要解析的视频地址(详见Inputs)
 4. 运行xml_maker.py
 5. 启动剪辑软件（如Premiere），将Outputs文件夹下的"main_comp.xml"与"subtitle.srt"文件导入剪辑软件，即可得到剪辑序列
+
+Inputs
+方法一：cmd定位根目录，键入python user.py '视频地址' 开始帧（可选） 结束帧（可选）     例>python user.py 'D:/Videos/2023-01-01 Apex Legends.mp4' 10000 20000
+方法二：在根目录新建input_videos.txt， 一行输入一条视频，如指定首末帧用逗号隔开。格式如: 视频地址, 开始帧（可选）, 结束帧（可选）   例>D:/Videos/2023-01-01 Apex Legends.mp4, 10000, 20000
