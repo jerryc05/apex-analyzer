@@ -101,7 +101,7 @@ def single_process_reader():
         print(f'Elapsed time: {(toc - tic).total_seconds()} seconds')
 
 
-def multi_process_reader()->None:
+def multi_process_reader() -> None:
     mp.freeze_support()
     video_paths = input_videos()
     evnchart_path = Path('./Temp/event_chart.feather')
@@ -114,14 +114,10 @@ def multi_process_reader()->None:
         if len(video_info) == 3:
             start_frame = video_info[1]
             end_frame = video_info[2]
-            predict_total_frames = mp.Value('d', end_frame - start_frame)
         print(video_path)
-        frames_count = mp.Value('d', 0)
         if start_frame is None:
             start_frame = 0
             end_frame = get_total_frames(video_path=video_path)
-            predict_total_frames = mp.Value('d', end_frame)
-        _half_frame = int((start_frame + end_frame) / 2)
         proc_count = mp.cpu_count()  # 皮一下，压榨所有CPU
         frames_per_process = int((end_frame - start_frame) / proc_count)
         proc_start_frame = start_frame
