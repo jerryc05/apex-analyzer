@@ -1,9 +1,9 @@
 from pathlib import Path
 import sys
-from typing import Any, List
+from typing import List, Tuple
 
 
-def sys_input() -> List[str | int]:
+def sys_input() -> List[Tuple[Path, int, int]]:
     sys_inputs = []
     video_info = []
     if len(sys.argv) > 1:
@@ -24,7 +24,7 @@ def sys_input() -> List[str | int]:
     return sys_inputs
 
 
-def csv_input() -> List[str | int]:
+def csv_input() -> List[Tuple[Path, int, int]]:
     csv_inputs = []
     assert Path('./input_videos.txt').is_file(), "input_videos.txt not found or is not a file!"
     input_txt = open('./input_videos.txt', encoding='utf-8')
@@ -44,7 +44,7 @@ def csv_input() -> List[str | int]:
     return csv_inputs
 
 
-def input_videos() -> List[Any]:
+def input_videos() -> List[Tuple[Path, int, int]]:
     list_inputs = sys_input()
     if len(list_inputs) == 0:
         list_inputs = csv_input()

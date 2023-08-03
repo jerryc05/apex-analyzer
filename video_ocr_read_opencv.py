@@ -9,13 +9,17 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from tqdm import tqdm
-import multiprocessing
+import multiprocessing as mp
 
 import weapon_dict
 from ammo_ocr import ammo_recognize_cv
-from damage_ocr import get_damage_match_tpl
 from weapon_recognize import weapon_recognize
 from func_input_videos import input_videos
+
+
+def get_total_frames(video_path: Path) -> int:
+    capture = cv2.VideoCapture(str(video_path))
+    return int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
 def read_apex_video(
@@ -23,6 +27,7 @@ def read_apex_video(
     output_original_data: Path,
     start_frame: int | None = None,
     end_frame: int | None = None,
+    process_id: int = 0,
 ):
     if not video_path.is_file():
         raise ValueError(f'Error: video_path [{video_path}] is not a file!')
@@ -31,19 +36,18 @@ def read_apex_video(
     total_frames = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(capture.get(cv2.CAP_PROP_FPS))
     _p_frame = 0
-    if not end_frame:
+    if start_frame is None or end_frame is None:
         end_frame = total_frames
-    frame_num = 0
-    if start_frame:
-        frame_num = start_frame
-        if end_frame:
-            total_frames = end_frame - start_frame
+        start_frame = 0
+    frame_num = start_frame
+    total_frames = end_frame - start_frame
     FRAMES = np.zeros([total_frames, 1], dtype=np.uint16)
     WEAPONS = np.zeros([total_frames, 1], dtype=np.object_)
     AMMOS = np.zeros([total_frames, 1], dtype=np.object_)
     DAMAGES = np.zeros([total_frames, 1], dtype=np.uint16)
     capture.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-    with tqdm(total=total_frames) as pbar:
+    desc = str(video_path) + ' ' + str(start_frame) + '-' + str(end_frame)
+    with tqdm(total=total_frames, desc=desc, position=process_id, leave=False) as pbar:
         pbar.update(_p_frame)
         while frame_num < end_frame:
             weapon = None
