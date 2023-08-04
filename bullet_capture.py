@@ -100,7 +100,7 @@ def bullet_capture(weapon: str = '*') -> None:
             'Ammo_After',
         ],
     )
-    dtf.to_excel('./BigData/bullet_list.xlsx', index=None)
+    dtf.to_feather('./BigData/bullet_list.feather')
 
 
 if __name__ == '__main__':

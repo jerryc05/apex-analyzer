@@ -10,6 +10,8 @@ import random
 from typing import cast
 import numpy.typing as npt
 
+from bullet_capture import bullet_capture
+
 
 def frame2time(frame: int, fps=60) -> str:
     second = int(frame / fps)
@@ -22,7 +24,7 @@ def frame2time(frame: int, fps=60) -> str:
 
 
 def style_normal(original_list):  # 剔除单发错误、打炸蛛之类的部分
-    args = list()
+    args = []
     for i in range(len(original_list)):
         if (
             weapon_dict.weapon_dict[original_list[i, 3]].is_auto == False
@@ -33,7 +35,7 @@ def style_normal(original_list):  # 剔除单发错误、打炸蛛之类的部�
 
 
 def style_cook(original_list):  # 马
-    args = list()
+    args = []
     for i in range(len(original_list)):
         if original_list[i, -2] > 10 and original_list[i, -1] < 40:  # 10发以上打了40以下
             args.append(i)
@@ -41,6 +43,16 @@ def style_cook(original_list):  # 马
             weapon_dict.weapon_dict[original_list[i, 3]].group == 's'
             and original_list[i, -1] < 20
         ):  # 马喷
+            args.append(i)
+    return original_list[args, :]
+
+
+def style_cool(original_list):
+    args = []
+    for i, original_item in enumerate(original_list):
+        _ammo = original_list[i, -2]
+        _damage = original_list[i, -1]
+        if _damage > 100 and _damage < 300:
             args.append(i)
     return original_list[args, :]
 
@@ -75,8 +87,8 @@ def style_b_random_single_round(original_list):  # 一发一剪，两发之间�
             continue
         np.random.shuffle(_ammo_indices)  # 随机优先级
         nonzero_damage = np.where(damage[_ammo_indices])
-        zero_damage = np.where(damage[_ammo_indices]==0)
-        _ammo_indices = _ammo_indices[np.hstack((nonzero_damage, zero_damage))][0,:]
+        zero_damage = np.where(damage[_ammo_indices] == 0)
+        _ammo_indices = _ammo_indices[np.hstack((nonzero_damage, zero_damage))][0, :]
         # 先取没用过的视频
         _chosen = False
         for _index in _ammo_indices:
@@ -101,15 +113,18 @@ def style_b_random_single_round(original_list):  # 一发一剪，两发之间�
 
 
 # source:r = using "BigData_FiringList.xlsx", b = using "bullet_list.xlsx"
-def main(source: str = 'r', style: str | None = None):
+def xml_maker(source: str = 'r', style: str = 'normal'):
     if source == 'r':
         firing_list = pd.read_excel('./BigData/BigData_FiringList.xlsx').values
         if style == 'normal':
             firing_list = style_normal(firing_list)
         if style == 'cook':
             firing_list = style_cook(firing_list)
+        if style == 'cool':
+            firing_list = style_cool(firing_list)
     if source == 'b':
-        original_firing_list = pd.read_excel('./BigData/bullet_list.xlsx').values
+        bullet_capture(style)
+        original_firing_list = pd.read_feather('./BigData/bullet_list.feather').values
         firing_list = style_b_random_single_round(original_firing_list)
     MAXVIDS = len(firing_list)
     mtx_clipitem = np.zeros([MAXVIDS, 7], dtype=np.uint32)
@@ -471,4 +486,4 @@ def main(source: str = 'r', style: str | None = None):
 
 
 if __name__ == '__main__':
-    main(source='b', style='normal')
+    xml_maker(source='b', style='normal')

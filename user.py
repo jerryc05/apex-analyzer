@@ -1,6 +1,8 @@
 # coding=UTF-8
 from datetime import datetime
 from pathlib import Path
+import sys
+import re
 from typing import Tuple
 import numpy as np
 
@@ -8,6 +10,7 @@ from tqdm import tqdm
 
 from chart_analyze import apex_chart_analyze
 from video_ocr_read_opencv import read_apex_video, get_total_frames
+from xml_maker import xml_maker
 from func_input_videos import input_videos
 import multiprocessing as mp
 
@@ -67,10 +70,6 @@ def split_reader(
         process_id=process_id,
     )
     return (process_id, FRAMES, WEAPONS, AMMOS, DAMAGES, total_frames, fps)
-
-
-def multi_reader():
-    pass  # 想好了再写zddsr
 
 
 def single_process_reader():
@@ -180,4 +179,13 @@ def multi_process_reader() -> None:
 
 
 if __name__ == '__main__':
-    multi_process_reader()
+    # 听输入判模式
+    if len(sys.argv) <= 1 or re.match('-a', sys.argv[1]):  # 分析视频
+        multi_process_reader()
+    if re.match('-c', sys.argv[1]):  # 制作剪辑表
+        if len(sys.argv) < 3:
+            xml_maker()
+        if len(sys.argv) == 3:
+            xml_maker(sys.argv[2])
+        if len(sys.argv) >= 4:
+            xml_maker(sys.argv[2], sys.argv[3])

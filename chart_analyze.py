@@ -6,21 +6,22 @@ import numpy as np
 import pandas as pd
 
 import weapon_dict
-from damage_ocr import damage_correction, get_damage_match_tpl
+from damage_ocr import get_damage_match_tpl
 from func_input_videos import input_videos
+from typing import cast, Tuple
 
 
 def apex_chart_analyze(
     video_path: Path,  # 视频路径
-    FRAMES: np.ndarray,  # 视频帧数列
-    WEAPONS: np.ndarray,  # 武器数列
-    AMMOS: np.ndarray,  # 弹药数列
-    DAMAGES: np.ndarray,  # 伤害数列
+    FRAMES: np.ndarray[int, np.dtype[np.uint16]],  # 视频帧数列
+    WEAPONS: np.ndarray[int, np.dtype[np.object_]],  # 武器数列
+    AMMOS: np.ndarray[int, np.dtype[np.object_]],  # 弹药数列
+    DAMAGES: np.ndarray[int, np.dtype[np.uint16]],  # 伤害数列
     TOTAL_FRAMES: int,  # 总帧数
     FPS: int = 60,  # 帧率,默认60
-    eventchart_path: Path = None,  # 事件表路径
-    fl_path: Path = None,  # 开火清单路径
-    rank_league: bool = None,  # 是否排位赛，None为不识别（效率略低）
+    eventchart_path: Path | None = None,  # 事件表路径
+    fl_path: Path | None = None,  # 开火清单路径
+    rank_league: bool | None = None,  # 是否排位赛，None为不识别（效率略低）
     FL_FWD_FRAME: int = 9,  # 开火提前记录帧数（而不是弹药减少了才开始记录）
     saveto_bigdata: bool = False,  # 保存至个人大数据
 ):
@@ -52,9 +53,8 @@ def apex_chart_analyze(
     damage_dealt = 0
 
     # 开火报表
-    firing_list = (
-        list()
-    )  # [VideoName, firing_start_f, firing_end_f, used_weapon, used_ammo, damage_dealt]
+    firing_list = []
+    # [VideoName, firing_start_f, firing_end_f, used_weapon, used_ammo, damage_dealt]
     firing_start_f = 0
 
     # 视频指针
@@ -69,10 +69,14 @@ def apex_chart_analyze(
     ):  # 获取frame_num所在帧图像，为get_damage_match_tpl()做准备
         nonlocal capture_p  # opencv读图指针，如果非连续读图用capture.set重定位
         if capture_p == frame_num:
-            ret, img_bgr = capture_frame.read()
+            ret, img_bgr = cast(
+                Tuple[bool, np.ndarray[int, np.dtype[np.uint8]]], capture_frame.read()
+            )
         else:
             capture_frame.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
-            ret, img_bgr = capture_frame.read()
+            ret, img_bgr = cast(
+                Tuple[bool, np.ndarray[int, np.dtype[np.uint8]]], capture_frame.read()
+            )
         capture_p = frame_num + 1
         return img_bgr
 
@@ -91,13 +95,13 @@ def apex_chart_analyze(
         damage_before = -1
 
         print(
-            'frame:{}, 使用{}打掉{}发弹药, DMG总:{}, DMG本次:{}'.format(
-                frame_num, shooting_weapon, shot_ammo, damage_fixed, damage_dealt
-            )
+            f'frame:{frame_num}, 使用{shooting_weapon}打掉{shot_ammo}发弹药,'
+            f' DMG总:{damage_fixed}, DMG本次:{damage_dealt}'
         )
         print(
-            'frame:{}, 使用{}打掉{}发弹药, DMG总:{}, DMG本次:{}'.format(
-                frame_num, shooting_weapon, shot_ammo, damage_fixed, damage_dealt
+            (
+                f'frame:{frame_num}, 使用{shooting_weapon}打掉{shot_ammo}发弹药,'
+                f' DMG总:{damage_fixed}, DMG本次:{damage_dealt}'
             ),
             file=txtdata,
         )
@@ -358,25 +362,25 @@ def apex_chart_analyze(
             print('New bigdata created!')
 
 
-if __name__ == '__main__':
+def main():
     # 如果对视频读取的结果有修改，在这里单独运行分析部分
     vid_path = input_videos()[0][0]
     # ORIGINAL_DATA = pd.read_excel('./Temp/ReadData_Original.xlsx').values
     original_data = pd.read_feather('./Temp/readdata_original.feather').values
-    FRAMES = original_data[:, 0:1]
-    WEAPONS = original_data[:, 1:2]
-    AMMOS = original_data[:, 2:3]
-    DAMAGES = original_data[:, 3:4]
-    total_frames = len(FRAMES)
+    mat_frames = original_data[:, 0:1]
+    mat_weapons = original_data[:, 1:2]
+    mat_ammos = original_data[:, 2:3]
+    mat_damages = original_data[:, 3:4]
+    total_frames = len(mat_frames)
     fps = 60
     EVN_CHART_PATH = './Temp/event_chart.feather'
     FL_PATH = './Temp/firing_list.feather'
     apex_chart_analyze(
         vid_path,
-        FRAMES,
-        WEAPONS,
-        AMMOS,
-        DAMAGES,
+        mat_frames,
+        mat_weapons,
+        mat_ammos,
+        mat_damages,
         total_frames,
         fps,
         EVN_CHART_PATH,
@@ -384,3 +388,7 @@ if __name__ == '__main__':
         None,
         saveto_bigdata=True,
     )
+
+
+if __name__ == '__main__':
+    main()
