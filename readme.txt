@@ -1,13 +1,14 @@
-皮の派派录像分析工具——Analyzer for Apex Legends beta0.4
+皮の派派录像分析工具——Analyzer for Apex Legends beta0.40
 经过jerryc05的拷打，代码相比第一版舒服不少了已经（bushi
 可以通过Apex录像了解您的表现
 目前已经实现了记录开火时刻与xml剪辑表输出（尽管伤害识别那么没准确（在调了在调了……
 开发用源素材分辨率1920*1080,60p，目前支持1920*1080与2560*1600分辨率
 
 
-2023.08.03 Upd 0.4:
+2023.08.04 Upd 0.40:
 为了解决打派群众日益增长的素材量和速度欠佳的分析程序的矛盾，547终于把咕了很久的多进程算法更新奉上！
 1.新增多进程读取功能，再也不用担心跑程序不卡顿了（doge）(具体效果因设备而异)
+2.将剪辑表生成工具集成到主程序，可以用user.py -c调用
 
 
 2023.08.02 Upd 0.33:
@@ -71,9 +72,9 @@ xml_maker: 剪辑表自动生成
 1. 打开cmd定位到程序文件夹根目录
 2. pip install -r "requirements.txt"
 3. 输入需要解析的视频地址(详见Inputs)
-4. 运行xml_maker.py
+4. 输入python user.py -c r/b（r:一梭子一剪，b:一枪一剪） '风格(r, eg. 'cool')/武器(b,支持正则化表达式, eg. '猎兽')'
 5. 启动剪辑软件（如Premiere），将Outputs文件夹下的"main_comp.xml"与"subtitle.srt"文件导入剪辑软件，即可得到剪辑序列
 
 Inputs
-方法一：cmd定位根目录，键入python user.py '视频地址' 开始帧（可选） 结束帧（可选）     例>python user.py 'D:/Videos/2023-01-01 Apex Legends.mp4' 10000 20000
+方法一：cmd定位根目录，键入python user.py -a '视频地址' 开始帧（可选） 结束帧（可选）     例>python user.py -a 'D:/Videos/2023-01-01 Apex Legends.mp4' 10000 20000
 方法二：在根目录新建input_videos.txt， 一行输入一条视频，如指定首末帧用逗号隔开。格式如: 视频地址, 开始帧（可选）, 结束帧（可选）   例>D:/Videos/2023-01-01 Apex Legends.mp4, 10000, 20000
