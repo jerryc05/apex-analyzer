@@ -9,16 +9,15 @@ def sys_input() -> List[Tuple[Path, int, int]]:
     if len(sys.argv) > 1:
         for _p, _str in enumerate(sys.argv):
             if _p:
-                _str = sys.argv[_p]
                 if _str[0] == '-':  # command
                     continue
                 if Path(_str).is_file():
-                    if len(video_info):
+                    if len(video_info) > 0:
                         assert len(video_info) == 1 or len(video_info) == 3, 'wrong inputs!'
                         sys_inputs.append(video_info)
                     video_info = [Path(_str)]
                 else:
-                    if len(video_info):
+                    if len(video_info) > 0:
                         video_info.append(int(_str))
         if len(video_info):
             assert len(video_info) == 1 or len(video_info) == 3, 'wrong inputs!'

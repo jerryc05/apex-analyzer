@@ -57,7 +57,9 @@ def style_cool(original_list):
     return original_list[args, :]
 
 
-def style_b_random_single_round(original_list):  # 一发一剪，两发之间尽量不用同一梭子
+def style_b_random_single_round(
+    original_list, rounds: int = 3
+):  # 一发一剪，两发之间尽量不用同一梭子
     def record_item(_index: int) -> None:
         nonlocal _chosen, used_videos, _last_frame, usage, args
         _chosen = True
@@ -73,42 +75,40 @@ def style_b_random_single_round(original_list):  # 一发一剪，两发之间�
     end_frame = cast(npt.NDArray[np.uint64], original_list[:, 2])
     damage = cast(npt.NDArray[np.int64], original_list[:, 5])
     ammo_before = cast(npt.NDArray[np.uint64], original_list[:, 6])
-    max_ammo = np.max(ammo_before)
-    _ammo_indices = np.where(ammo_before == max_ammo)[0]
-    _index = cast(int, random.choice(_ammo_indices))
-    _video = cast(str, video_path[_index])
-    used_videos = [_video]  # 已使用视频
-    _last_frame = cast(int, end_frame[_index])
-    usage[_index] = 1
-    args.append(_index)
-    for _ammo in range(max_ammo - 1, -1, -1):
-        _ammo_indices = np.where(ammo_before == _ammo)[0]
-        if not _ammo_indices.size:
-            continue
-        np.random.shuffle(_ammo_indices)  # 随机优先级
-        nonzero_damage = np.where(damage[_ammo_indices])
-        zero_damage = np.where(damage[_ammo_indices] == 0)
-        _ammo_indices = _ammo_indices[np.hstack((nonzero_damage, zero_damage))][0, :]
-        # 先取没用过的视频
-        _chosen = False
-        for _index in _ammo_indices:
-            _video = video_path[_index]
-            if _video in used_videos:
+    for _i in range(rounds):
+        max_ammo = np.max(ammo_before)
+        used_videos = []
+        _last_frame = 0
+        for _ammo in range(max_ammo, -1, -1):
+            _ammo_indices = np.where(ammo_before == _ammo)[0]
+            _unused_indices = np.where(usage == 0)[0]
+            _ammo_indices = np.intersect1d(_ammo_indices, _unused_indices)
+            if not _ammo_indices.size:
                 continue
-            record_item(_index)
-            break
-        if _chosen:
-            continue
-        for _index in _ammo_indices:
-            _start_frame = cast(int, end_frame[_index])
-            if _start_frame == _last_frame:
+            np.random.shuffle(_ammo_indices)  # 随机优先级
+            nonzero_damage = np.where(damage[_ammo_indices])
+            zero_damage = np.where(damage[_ammo_indices] == 0)
+            _ammo_indices = _ammo_indices[np.hstack((nonzero_damage, zero_damage))][0, :]
+            # 先取没用过的视频
+            _chosen = False
+            for _index in _ammo_indices:
+                _video = video_path[_index]
+                if _video in used_videos:
+                    continue
+                record_item(_index)
+                break
+            if _chosen:
                 continue
+            for _index in _ammo_indices:
+                _start_frame = cast(int, end_frame[_index])
+                if _start_frame == _last_frame:
+                    continue
+                record_item(_index)
+                break
+            if _chosen:
+                continue
+            _index = _ammo_indices[0]
             record_item(_index)
-            break
-        if _chosen:
-            continue
-        _index = _ammo_indices[0]
-        record_item(_index)
     return original_list[args, :]
 
 
