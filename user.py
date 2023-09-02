@@ -182,7 +182,7 @@ if __name__ == '__main__':
     # 听输入判模式
     if len(sys.argv) <= 1 or re.match('-a', sys.argv[1]):  # 分析视频
         multi_process_reader()
-    if re.match('-c', sys.argv[1]):  # 制作剪辑表
+    if len(sys.argv) > 1 and re.match('-c', sys.argv[1]):  # 制作剪辑表
         if len(sys.argv) < 3:
             xml_maker()
         if len(sys.argv) == 3:
