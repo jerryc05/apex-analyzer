@@ -1,14 +1,13 @@
+from typing import Tuple
 import numpy as np
 import cv2
-import pytesseract
-from PIL import Image
 from func_img_proc import scale_image
 
 # DMGCUT:L1750,R1830,L95,H120
 # Img_Damage = IMG[94:120,1749:1835]
 DMG_REF = cv2.imread('./Ref/DmgLogo/DmgLogo.png', 0)
+DMG_NUM = [cv2.imread('./Ref/Damage/' + str(_p) + '.png', 0) for _p in range(10)]
 h_ref, w_ref = np.shape(DMG_REF)
-pytesseract.pytesseract.tesseract_cmd = 'D:/Program Files/Tesseract-OCR/tesseract.exe'
 
 
 def dmg_area_select(
@@ -30,44 +29,136 @@ def dmg_area_select(
     return img_cut[:, 74:]  # 非排位
 
 
-def cut_dmg_logo_classic(
-    img: np.ndarray[int, np.dtype[np.uint8]]
-) -> np.ndarray[int, np.dtype[np.uint8]]:
-    img_cut = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
-    _h, _w = np.shape(img_cut)
-    sim = np.zeros([_w - w_ref, 1])
-    for i in range(_w - w_ref):
-        comp = DMG_REF == img_cut[:, i : i + w_ref]
-        sim[i, 0] = len(np.where(comp == True)[0])
-    logo_fit = np.where(sim[:, 0] == np.max(sim[:, 0]))[0][0]
-    return img_cut[:, logo_fit + w_ref :]
-
-
 def cut_dmg_logo_match_tpl(
-    img: np.ndarray[int, np.dtype[np.uint8]]
+    img: np.ndarray[int, np.dtype[np.uint8]], threshold_val=165
 ) -> np.ndarray[int, np.dtype[np.uint8]]:
-    img_cut = cv2.threshold(img, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
+    if len(img.shape) > 2:
+        img_red = img[:, :, 2]
+        img_red = cv2.threshold(img_red, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv2.threshold(img, threshold_val, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
+    try:
+        res = cv2.matchTemplate(img_red, DMG_REF, cv2.TM_CCOEFF_NORMED)
+    except:
+        res = cv2.matchTemplate(img, DMG_REF, cv2.TM_CCOEFF_NORMED)
+    loc = np.where(res == np.max(res))[1][0]  # xtick
+    # print('Max Simulation: {}'.format(np.max(res)))
+    return img[:, loc + w_ref :]
+
+
+def post_process_img(  # 滤波与去除上下白边
+    img_cut: np.ndarray[int, np.dtype[np.uint8]]
+) -> np.ndarray[int, np.dtype[np.uint8]]:
     if len(img_cut.shape) > 2:
         img_cut = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
-    res = cv2.matchTemplate(img_cut, DMG_REF, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res == np.max(res))[1][0]  # xtick
-    return img_cut[:, loc + w_ref :]
+    kernel = np.ones((2, 2), np.uint8)
+    dilation = cv2.dilate(img_cut, kernel, iterations=1)
+    erosion = cv2.erode(dilation, kernel, iterations=1)
+    return erosion[9:-4, :]  # 裁切上下白边
 
 
-def get_damage(
-    img: np.ndarray[int, np.dtype[np.uint8]], rank_league: bool | None = None
+def split_dmg_digits(img: np.ndarray[int, np.dtype[np.uint8]]) -> list():  # 分割数字到每一位
+    img_cut = img
+    empty_detector = np.min(img_cut, axis=0)
+    _ret = list()
+    _renew = True
+    if np.min(empty_detector) == 255:
+        return _ret  # 没有数字
+    blackarea_index = np.where(empty_detector == 0)[0]
+    _first_index = blackarea_index[0]
+    _last_index = blackarea_index[0]
+    for _index in blackarea_index:
+        if _renew:  # 刷新
+            _first_index = _index
+            _last_index = _index
+            _renew = False
+        if not _renew and _index - _last_index < 2:  # 连续
+            _last_index = _index
+        if not _renew and _index - _last_index >= 2:  # 出现下一位数
+            if _last_index - _first_index > 9:
+                return list()
+            _ret.append(img_cut[:, _first_index : _last_index + 1])
+            _renew = True
+            if _index - _last_index >= 10:  # 后面没数字了
+                return _ret
+    if not _renew:
+        if _last_index - _first_index > 9:
+            return list()
+        _ret.append(img_cut[:, _first_index : _last_index + 1])
+    return _ret
+
+
+def dmg_digit_recognize(
+    img: np.ndarray[int, np.dtype[np.uint8]]
+) -> int | None:  # 单位数字识别
+    assert len(img.shape) == 2, 'Input image channel error!'
+    _h, _w = img.shape
+    if _w > 10 or _w < 2:  # 噪点或多位数字
+        return None
+    if np.max(img) == 0 or np.min(img) == 255:  # 全黑
+        return None
+    img_hstacked = np.hstack(
+        (255 * np.ones([_h, 2], dtype=np.uint8), img, 255 * np.ones([_h, 2], dtype=np.uint8))
+    )
+    max_sim = -1
+    max_sim_num = 0
+    max_sim_not1 = -1
+    max_sim_not1_num = 0
+    for _p in range(10):
+        num_sim = np.max(cv2.matchTemplate(img_hstacked, DMG_NUM[_p], cv2.TM_CCOEFF_NORMED))
+        # print('{} similarity: {}'.format(_p, num_sim))
+        if num_sim > max_sim:
+            max_sim = num_sim
+            max_sim_num = _p
+        if not _p == 1 and num_sim > max_sim_not1:
+            max_sim_not1 = num_sim
+            max_sim_not1_num = _p
+    if max_sim_num == 1 and _w <= 6:  # 判1
+        return 1
+    if max_sim_not1_num == 8:
+        # 判6
+        __block_cnt = 0
+        __last_pos = -2
+        for __p in range(int(_w / 2) - 1, _w):
+            if img[4, __p] == 0:
+                if __p - __last_pos > 1:
+                    __block_cnt += 1
+                __last_pos = __p
+        if __block_cnt == 0:
+            return 6
+        # 判9
+        __block_cnt = 0
+        __last_pos = -2
+        for __p in range(int(_w / 2) + 1):
+            if img[8, __p] == 0:
+                if __p - __last_pos > 1:
+                    __block_cnt += 1
+                __last_pos = __p
+        if __block_cnt == 0:
+            return 9
+        return 8
+    return max_sim_not1_num
+
+
+def get_damage_match_tpl(
+    img: np.ndarray[int, np.dtype[np.uint8]],
+    rank_league: bool | None = None,
+    threshold_val=190,
 ) -> int:
     img_cut = dmg_area_select(img, rank_league=rank_league)
-    img_dmgnum = cut_dmg_logo_match_tpl(img_cut)
+    img_dmgnum = cut_dmg_logo_match_tpl(img_cut, threshold_val=threshold_val)
     if img_dmgnum.shape[1] == 0:
         return 0
-    cv2.imwrite('./Temp/temp_damage.png', img_dmgnum)
-    text_damage = pytesseract.image_to_string(Image.open('./Temp/temp_damage.png'), lang='num')
-    text_damage = ''.join(filter(str.isdigit, text_damage))
-    if len(text_damage):
-        return int(text_damage)
-    return 0
+    img_dmgnum = post_process_img(img_dmgnum)
+    digits_list = split_dmg_digits(img_dmgnum)
+    if not len(digits_list):
+        return 0
+    damage = 0
+    for digit_img in digits_list:
+        digit_num = dmg_digit_recognize(digit_img)
+        if digit_num is not None:
+            damage = 10 * damage + digit_num
+    return damage
 
 
 def damage_correction(damage_fixed: int, damage_read: int) -> int:  # 修正策略
@@ -76,35 +167,131 @@ def damage_correction(damage_fixed: int, damage_read: int) -> int:  # 修正策�
     return max(damage_fixed, damage_read)
 
 
-def main() -> None:
-    img_bgr = cv2.imread('# Your APEX Video Screenshot')
-    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    img_cut = img_bgr[94:120, 1675:1761]
-    img_dmgnum = cut_dmg_logo_classic(img_cut)
-    cv2.imwrite('./Temp/classicoutput.png', img_dmgnum)
-    img_cut = cv2.threshold(img_cut, 190, 255, cv2.THRESH_BINARY_INV)[1]  # 二值化
-    img_cut_1 = cv2.cvtColor(img_cut, cv2.COLOR_BGR2GRAY)
-    res = cv2.matchTemplate(img_cut_1, DMG_REF, cv2.TM_CCOEFF_NORMED)
-    loc = np.where(res == np.max(res))[1][0]  # xtick
-    dmgnum_1 = img_cut_1[:, loc + w_ref :]
-    cv2.imwrite('./Temp/newoutput.png', dmgnum_1)
-
-
+# developing new algorithm
 from pathlib import Path
 
 
 def convert_train_img() -> None:
     sourcedir = Path('./Temp/train')
     destdir = Path('./Temp/train_dmg')
-    cnt = 1
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
     for img_path in sourcedir.rglob('*.jpg'):
         img_gray = cv2.imread(str(img_path), 0)
+        print('Processing Img {}'.format(cnt + 1))
         img_cut = cut_dmg_logo_match_tpl(dmg_area_select(img_gray, False))
-        _output = str(destdir) + '/' + str(cnt) + '.png'
-        cv2.imwrite(_output, img_cut)
+        if img_cut.size:
+            _output = str(destdir) + '/' + str(cnt) + '.png'
+            cnt += 1
+            cv2.imwrite(_output, img_cut)
+    print('{} images converted successfully!'.format(cnt))
+
+
+def post_convert_train_img() -> None:
+    sourcedir = Path('./Temp/train_dmg')
+    destdir = Path('./Temp/post_train_dmg')
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
+    for img_path in sourcedir.rglob('*.png'):
+        img_gray = cv2.imread(str(img_path), 0)
+        img_processed = post_process_img(img_gray)
+        img_cut = img_processed[9:-4, :]
         cnt += 1
-    print('{} images convert successfully!'.format(cnt))
+        cv2.imwrite(str(destdir) + '/' + str(cnt) + '.png', img_cut)
+    print('{} images post-converted successfully!'.format(cnt))
+
+
+def split_train_img() -> None:
+    sourcedir = Path('./Temp/post_train_dmg')
+    destdir = Path('./Temp/split_train_dmg')
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
+    for img_path in sourcedir.rglob('*.png'):
+        img_gray = cv2.imread(str(img_path), 0)
+        img_series = split_dmg_digits(img_gray)
+        _i = 0
+        cnt += 1
+        for img in img_series:
+            _i += 1
+            cv2.imwrite(str(destdir) + '/' + str(cnt) + '_' + str(_i) + '.png', img)
+
+
+def test_split_train_img() -> None:
+    sourcedir = Path('./Temp/split_train_dmg')
+    destdir = Path('./Temp/digit_recognize_test')
+    if destdir.is_dir():
+        for item in destdir.rglob('*'):
+            item.unlink()
+        destdir.rmdir()
+    destdir.mkdir(parents=True, exist_ok=True)
+    cnt = 0
+    for img_path in sourcedir.rglob('*.png'):
+        print(img_path)
+        img_gray = cv2.imread(str(img_path), 0)
+        predict_num = dmg_digit_recognize(img_gray)
+        cnt += 1
+        if predict_num is None:
+            cv2.imwrite(str(destdir) + '/None_' + str(cnt) + '.png', img_gray)
+        else:
+            cv2.imwrite(
+                str(destdir) + '/' + str(predict_num) + '_' + str(cnt) + '.png', img_gray
+            )
+    print('{} images processed!'.format(cnt))
+
+
+def key_capture_test(
+    threshold_val: int = 165, output_errs_img: bool = True
+) -> Tuple[int, int, int]:
+    sourcedir = Path('./Temp/key_capture')
+    destdir = Path('./Temp/recognize_test')
+    if output_errs_img:
+        if destdir.is_dir():
+            for item in destdir.rglob('*'):
+                item.unlink()
+            destdir.rmdir()
+        destdir.mkdir(parents=True, exist_ok=True)
+    errs = 0
+    discards = 0
+    cnt = 0
+    for img_path in sourcedir.rglob('*.png'):
+        img_bgr = cv2.imread(str(img_path))
+        img_red = dmg_area_select(img_bgr)[:, :, 2]
+        img_cut = post_process_img(cut_dmg_logo_match_tpl(dmg_area_select(img_bgr)))
+        cnt += 1
+        dmg_real = int(img_path.stem.split('_')[0])
+        dmg_read = get_damage_match_tpl(img_bgr, None, threshold_val=threshold_val)
+        if not dmg_read == dmg_real:
+            if dmg_read is None:
+                discards += 1
+            else:
+                errs += 1
+                if output_errs_img:
+                    cv2.imwrite(
+                        str(destdir)
+                        + '/'
+                        + str(dmg_read)
+                        + '_'
+                        + str(dmg_real)
+                        + '('
+                        + str(cnt)
+                        + ').png',
+                        img_cut,
+                    )
+                    cv2.imwrite(
+                        str(destdir)
+                        + '/'
+                        + str(dmg_read)
+                        + '_'
+                        + str(dmg_real)
+                        + '('
+                        + str(cnt)
+                        + ')_red.png',
+                        img_red,
+                    )
+    if output_errs_img:
+        print('{} images read, {} errs, {} discards!'.format(cnt, errs, discards))
+    return cnt - errs - discards, errs, discards
 
 
 if __name__ == '__main__':
-    convert_train_img()
+    key_capture_test()

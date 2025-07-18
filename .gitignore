@@ -1,6 +1,8 @@
 ~*
 __pycache__/
+.vscode/
 /venv/*
 Output/
 Temp/
 BigData/
+input_videos.txt
