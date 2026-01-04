@@ -3,6 +3,7 @@ __pycache__/
 .vscode/
 /venv/*
 Output/
-Temp/
+temp/
 BigData/
 input_videos.txt
+outputs/
